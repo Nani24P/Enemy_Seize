@@ -22,12 +22,12 @@
         <div class="brand-badge">⚒️</div>
         <div>
           <h1>Siege Forge</h1>
-          <div class="icon-row" aria-label="Tower icons and themes">
-            <span>🏹</span><span>💣</span><span>❄️</span><span>🔥</span><span>⚡</span>
-          </div>
+          <div class="icon-row" aria-label="Tower icons and themes"><span>🏹</span><span>💣</span><span>❄️</span><span>🔥</span><span>⚡</span></div>
         </div>
       </div>
       <div class="top-actions">
+        <button id="profileBtn" class="ghost icon-btn" aria-label="Profile">👤</button>
+        <button id="codexBtn" class="ghost icon-btn" aria-label="Codex">📖</button>
         <button id="settingsBtn" class="ghost icon-btn" aria-label="Settings">⚙️</button>
         <button id="installBtn" class="ghost icon-btn hidden" aria-label="Install app">⬇️</button>
       </div>
@@ -36,8 +36,9 @@
     <main>
       <section id="menu" class="panel screen active simple-menu">
         <div class="menu-strip">
-          <span class="menu-chip">🗺️ Campaign</span>
-          <span class="menu-chip">🔓 Unlocks</span>
+          <span class="menu-chip">🗺️ 3 Maps</span>
+          <span class="menu-chip">⭐ Star Runs</span>
+          <span class="menu-chip">🎵 Sound</span>
           <span class="menu-chip">📱 Offline Ready</span>
         </div>
         <div id="mapGrid" class="map-grid"></div>
@@ -46,7 +47,7 @@
       <section id="game" class="screen">
         <div class="hud panel">
           <div class="hud-left">
-            <div class="map-chip"><span>Realm</span><b id="mapName">Forest Trail</b></div>
+            <div class="map-chip"><span>Realm</span><b id="mapName">Jungle Trail</b></div>
             <div class="stat-pill"><span>Wave</span><b id="waveText">1</b></div>
             <div class="stat-pill gold"><span>Gold</span><b id="goldText">180</b></div>
             <div class="stat-pill lives"><span>Lives</span><b id="livesText">20</b></div>
@@ -81,22 +82,31 @@
   <div id="settingsModal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card panel">
-      <div class="modal-head">
-        <div>
-          <div class="eyebrow">Settings</div>
-          <h2>Game Options</h2>
-        </div>
-        <button id="closeSettingsBtn" class="ghost icon-btn" aria-label="Close settings">✕</button>
-      </div>
+      <div class="modal-head"><div><div class="eyebrow">Settings</div><h2>Game Options</h2></div><button id="closeSettingsBtn" class="ghost icon-btn">✕</button></div>
       <div class="setting-list">
+        <button id="toggleSoundBtn" class="setting-row ghost"></button>
+        <button id="toggleMusicBtn" class="setting-row ghost"></button>
         <button id="toggleMotionBtn" class="setting-row ghost"></button>
         <button id="toggleDamageBtn" class="setting-row ghost"></button>
-        <div class="setting-meta">
-          <span>App Version</span>
-          <b>v2.1 · Real Veggie Pass</b>
-        </div>
-        <button id="resetProgressBtn" class="ghost danger-btn">Reset Progress</button>
+        <div class="setting-meta"><span>App Version</span><b>v2.2 · Three Realms</b></div>
+        <button id="resetProgressBtn" class="ghost danger-btn">Reset Current Slot</button>
       </div>
+    </div>
+  </div>
+
+  <div id="codexModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-codex="true"></div>
+    <div class="modal-card panel large-modal">
+      <div class="modal-head"><div><div class="eyebrow">Codex</div><h2>Towers & Veggies</h2></div><button id="closeCodexBtn" class="ghost icon-btn">✕</button></div>
+      <div id="codexContent" class="codex-grid"></div>
+    </div>
+  </div>
+
+  <div id="profileModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-profile="true"></div>
+    <div class="modal-card panel large-modal">
+      <div class="modal-head"><div><div class="eyebrow">Profile</div><h2>Save Slots</h2></div><button id="closeProfileBtn" class="ghost icon-btn">✕</button></div>
+      <div id="profileContent"></div>
     </div>
   </div>
 

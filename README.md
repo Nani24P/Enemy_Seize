@@ -1,27 +1,49 @@
-# Siege Forge PWA — Phase 2.0
+# Siege Forge PWA — Phase 2.2 Three Realms
 
-Mobile-first tower defense PWA with glossy veggie enemies, floating tower forge menu, campaign map progression, tower unlocks, and boss-wave polish.
+A mobile-first tower-defense PWA with 3 unlocked maps, matte veggie enemies, star ratings, procedural sound/music, codex, profile save slots, boss intros, and offline support.
+
+## Maps
+
+- Jungle Trail
+- Dune Split
+- Molten Cross
+
+All maps are unlocked from the start.
+
+## Phase 2.2 features
+
+- Only 3 maps in the PWA
+- Longer enemy trails/path routes
+- Better home page map art cards
+- Detailed matte canvas veggie sprites instead of emoji enemies
+- Map-specific veggie variants
+- Procedural sound effects and simple music loop
+- Star ratings per map
+- Boss intro screen every 5 waves
+- Better map-clear victory screen
+- Enemy and tower codex
+- Three profile/save slots
+- Settings for sound, music, reduced motion, damage numbers, and reset current slot
+- Offline service worker cache
 
 ## Run locally
-Open `index.html` from a simple static server, or upload the folder to GitHub Pages.
 
-## Deploy to GitHub Pages
-1. Upload all files to a GitHub repository.
-2. Go to Settings → Pages.
-3. Source: `main` branch, root folder.
-4. Open the Pages URL with `?v=2-0` to avoid old service-worker cache.
+Use a local static server:
 
-## Phase 2 features
-- Map progression: later maps are locked until previous maps are cleared.
-- Tower unlocks: Arrow/Cannon start unlocked; Frost, Flame, and Storm unlock as you clear maps.
-- Floating Tower Forge menu appears only when a tower is selected.
-- Upgrade button fixed with stable click handling and lower upgrade costs.
-- Glossy veggie enemy rendering with highlight/shadow layer.
-- Boss veggie wave banner every 5 waves.
+```bash
+python3 -m http.server 8000
+```
 
-## Edit points
-- `data/maps.js` — map paths, pads, themes, veggie sets.
-- `data/towers.js` — tower cost, damage, range, role, strategy.
-- `data/enemies.js` — enemy HP, speed, reward.
-- `src/main.js` — game systems and rendering.
-- `src/styles.css` — UI polish.
+Then open `http://localhost:8000`.
+
+## GitHub Pages
+
+Upload all files to a GitHub repo and enable Pages from the root of the main branch.
+
+When testing a new build, use:
+
+```text
+?v=2-2
+```
+
+If iPhone/iPad keeps the old UI, remove the old Home Screen icon and add it again.

@@ -1,7 +1,7 @@
 {
   "name": "Siege Forge",
   "short_name": "Siege Forge",
-  "description": "A mobile-first 5-map tower defense PWA.",
+  "description": "A mobile-first 3-map tower defense PWA with veggie enemies, stars, codex, profiles, sound, and offline support.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
