@@ -53,3 +53,20 @@ Open `data/towers.js` and adjust cost, damage, range, fire rate, splash, slow, b
 ## Edit enemies
 
 Open `data/enemies.js` and adjust HP, speed, reward, color, and armor.
+
+## Phase 1.5 UI polish added
+
+This build upgrades the Phase 1 interface before Phase 2 gameplay progression:
+
+- New compact HUD with map, wave, gold, lives, score, pause, speed, and map buttons
+- Better tower picker with icons, cost, tower role, and short strategy note
+- Selected tower details panel with damage, range, fire rate, upgrade cost, and sell value
+- Range circle only for the selected tower, so the board is cleaner
+- Tower level dots and improved tower identity colors
+- Enemy health bars, shield marker, boss marker, slow/burn glow effects
+- Projectile, cannon splash, build, upgrade, leak, and kill feedback effects
+- Mobile-first bottom tower picker and larger tap targets
+
+## Best Phase 1.5 tower combo
+
+Use Frost before your main damage zone, then add Cannon or Flame near bends. Arrow is cheap cleanup, and Storm is best later when enemies come in groups.

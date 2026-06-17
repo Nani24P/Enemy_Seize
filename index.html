@@ -17,34 +17,47 @@
     <header class="topbar">
       <div>
         <h1>Siege Forge</h1>
-        <p id="subtitle">5-map tower defense PWA</p>
+        <p id="subtitle">Phase 1.5 · polished tower defense PWA</p>
       </div>
       <button id="installBtn" class="ghost hidden">Install</button>
     </header>
 
     <main>
       <section id="menu" class="panel screen active">
-        <h2>Choose a Realm</h2>
-        <p class="muted">Tap a map, place towers on green pads, and survive the waves.</p>
+        <div class="menu-head">
+          <div>
+            <h2>Choose a Realm</h2>
+            <p class="muted">Tap a map, place towers on green pads, and build one strong kill zone.</p>
+          </div>
+          <div class="legend-card">
+            <b>Tip</b>
+            <span>Frost before Cannon/Flame is the safest combo.</span>
+          </div>
+        </div>
         <div id="mapGrid" class="map-grid"></div>
       </section>
 
       <section id="game" class="screen">
-        <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
         <div class="hud panel">
-          <div class="stats">
-            <span>Map: <b id="mapName">Grass Path</b></span>
-            <span>Wave: <b id="waveText">1</b></span>
-            <span>Gold: <b id="goldText">150</b></span>
-            <span>Lives: <b id="livesText">20</b></span>
-            <span>Score: <b id="scoreText">0</b></span>
-          </div>
+          <div class="stat-pill map-pill"><span>Map</span><b id="mapName">Grass Path</b></div>
+          <div class="stat-pill"><span>Wave</span><b id="waveText">1</b></div>
+          <div class="stat-pill gold"><span>Gold</span><b id="goldText">150</b></div>
+          <div class="stat-pill lives"><span>Lives</span><b id="livesText">20</b></div>
+          <div class="stat-pill"><span>Score</span><b id="scoreText">0</b></div>
           <div class="actions">
             <button id="startWaveBtn">Start Wave</button>
+            <button id="speedBtn" class="ghost">Speed x1</button>
             <button id="pauseBtn" class="ghost">Pause</button>
             <button id="backBtn" class="ghost">Maps</button>
           </div>
         </div>
+
+        <div class="board-wrap">
+          <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
+          <div id="toast" class="toast hidden"></div>
+        </div>
+
+        <div id="infoPanel" class="info-panel panel hidden"></div>
         <div id="buildPanel" class="build-panel panel hidden"></div>
       </section>
     </main>
