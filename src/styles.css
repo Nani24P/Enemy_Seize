@@ -163,3 +163,25 @@ body {
 .tower-choice .strategy { margin-top:auto; font-size:11px; font-weight:800; color:rgba(248,250,252,.88); padding:7px 9px; border-radius:12px; background:rgba(2,6,23,.34); border:1px solid rgba(255,255,255,.09); }
 @media (max-width: 860px) { .tower-popover { left: 10px; right:10px; top:auto; bottom:70px; width:auto; } }
 @media (max-width: 560px) { .map-grid { grid-template-columns: repeat(2, 1fr); } .map-card { min-height: 172px; } .map-title { font-size:18px; } .map-caption { font-size:12px; } }
+
+
+/* Phase 2 additions */
+.map-card.locked {
+  filter: grayscale(.35) brightness(.74);
+  cursor: not-allowed;
+}
+.map-card.locked::before { opacity: .12; }
+.locked-tower { filter: grayscale(.35); opacity: .58; }
+.tower-popover { animation: forgePop .16s ease-out; }
+@keyframes forgePop {
+  from { opacity: 0; transform: translateY(-8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.info-card, .tower-popover {
+  background-image:
+    radial-gradient(circle at 20% 12%, rgba(255,255,255,.12), transparent 24%),
+    linear-gradient(180deg, rgba(15,23,42,.94), rgba(2,6,23,.9));
+}
+.tower-choice:not(:disabled):hover, .map-card:not(.locked):hover {
+  box-shadow: 0 24px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.14);
+}

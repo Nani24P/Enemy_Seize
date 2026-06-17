@@ -22,18 +22,20 @@
         <div class="brand-badge">⚒️</div>
         <div>
           <h1>Siege Forge</h1>
-          <div class="icon-row"><span>🏹</span><span>💣</span><span>❄️</span><span>🔥</span><span>⚡</span></div>
+          <div class="icon-row" aria-label="Tower icons and themes">
+            <span>🏹</span><span>💣</span><span>❄️</span><span>🔥</span><span>⚡</span>
+          </div>
         </div>
       </div>
-      <button id="installBtn" class="ghost hidden">⬇️</button>
+      <button id="installBtn" class="ghost icon-btn hidden" aria-label="Install app">⬇️</button>
     </header>
 
     <main>
       <section id="menu" class="panel screen active simple-menu">
         <div class="menu-strip">
-          <span class="menu-chip">🗺️ 5 Maps</span>
-          <span class="menu-chip">🥕 Veggie Waves</span>
-          <span class="menu-chip">📱 PWA</span>
+          <span class="menu-chip">🗺️ Campaign</span>
+          <span class="menu-chip">🔓 Unlocks</span>
+          <span class="menu-chip">🥕 Glossy Veggies</span>
         </div>
         <div id="mapGrid" class="map-grid"></div>
       </section>
@@ -41,7 +43,7 @@
       <section id="game" class="screen">
         <div class="hud panel">
           <div class="hud-left">
-            <div class="map-chip"><span>Realm</span><b id="mapName">Forest Trail</b></div>
+            <div class="map-chip"><span>Realm</span><b id="mapName">Grass Path</b></div>
             <div class="stat-pill"><span>Wave</span><b id="waveText">1</b></div>
             <div class="stat-pill gold"><span>Gold</span><b id="goldText">180</b></div>
             <div class="stat-pill lives"><span>Lives</span><b id="livesText">20</b></div>
@@ -60,7 +62,7 @@
             <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
             <div id="toast" class="toast hidden"></div>
             <div id="infoPanel" class="tower-popover hidden"></div>
-            <div class="board-help">Tap green pads · tap towers for the floating forge menu</div>
+            <div class="board-help">Tap green pads · upgrade from floating forge menu</div>
           </div>
         </div>
 

@@ -70,18 +70,45 @@ let selectedTower = null;
 let lastTime = 0;
 let deferredInstallPrompt = null;
 let toastTimer = null;
-const saveKey = 'siege-forge-save-v1-9-ultra';
+const saveKey = 'siege-forge-save-v2-0-phase2';
+const towerUnlocks = { arrow: 0, cannon: 0, frost: 1, flame: 2, storm: 3 };
+const phase2MapGoals = [0, 10, 12, 14, 16];
+let infoPanelLastKey = '';
+
+function getProgress() {
+  const save = loadSave();
+  return save.progress || { completedMaps: 0, bestWave: {}, completed: {} };
+}
+function isMapUnlocked(index) {
+  const progress = getProgress();
+  return index === 0 || (progress.completedMaps || 0) >= index;
+}
+function isTowerUnlocked(kind) {
+  const progress = getProgress();
+  return (progress.completedMaps || 0) >= (towerUnlocks[kind] || 0);
+}
+function recordProgress(waveJustCleared = null) {
+  if (!state) return;
+  const save = loadSave();
+  save.best ||= {};
+  save.progress ||= { completedMaps: 0, bestWave: {}, completed: {} };
+  if (!save.best[state.map.id] || state.score > save.best[state.map.id]) save.best[state.map.id] = state.score;
+  if (waveJustCleared) save.progress.bestWave[state.map.id] = Math.max(save.progress.bestWave[state.map.id] || 0, waveJustCleared);
+  if (state.won) {
+    save.progress.completed[state.map.id] = true;
+    const completedIndex = MAPS.findIndex(m => m.id === state.map.id) + 1;
+    save.progress.completedMaps = Math.max(save.progress.completedMaps || 0, completedIndex);
+  }
+  localStorage.setItem(saveKey, JSON.stringify(save));
+}
 
 function loadSave() {
-  try { return JSON.parse(localStorage.getItem(saveKey)) || { best: {} }; }
-  catch { return { best: {} }; }
+  try { return JSON.parse(localStorage.getItem(saveKey)) || { best: {}, progress: { completedMaps: 0, bestWave: {}, completed: {} } }; }
+  catch { return { best: {}, progress: { completedMaps: 0, bestWave: {}, completed: {} } }; }
 }
 
 function saveGame() {
-  if (!state) return;
-  const save = loadSave();
-  if (!save.best[state.map.id] || state.score > save.best[state.map.id]) save.best[state.map.id] = state.score;
-  localStorage.setItem(saveKey, JSON.stringify(save));
+  recordProgress();
 }
 
 function showToast(text) {
@@ -106,27 +133,32 @@ function showGame() {
 
 function renderMapCards() {
   const save = loadSave();
+  const progress = save.progress || { completedMaps: 0, bestWave: {}, completed: {} };
   mapGrid.innerHTML = '';
-  MAPS.forEach((map) => {
+  MAPS.forEach((map, index) => {
+    const unlocked = isMapUnlocked(index);
+    const completed = !!progress.completed?.[map.id];
     const card = document.createElement('article');
-    card.className = 'map-card';
+    card.className = `map-card ${unlocked ? '' : 'locked'}`;
     card.style.background = `linear-gradient(160deg, ${map.theme[1]}aa, rgba(255,255,255,.04))`;
     card.style.setProperty('--map-accent', map.theme[2]);
+    const unlockText = index === 0 ? 'Ready' : `Unlock: clear ${MAPS[index - 1].name}`;
     card.innerHTML = `
       <div>
         <div class="map-head">
-          <span class="map-hero-icon">${map.icon || '🗺️'}</span>
+          <span class="map-hero-icon">${unlocked ? (map.icon || '🗺️') : '🔒'}</span>
           <div class="map-mini-icons"><span>${map.veggieIcons?.[0] || '🍅'}</span><span>${map.veggieIcons?.[1] || '🥕'}</span><span>${map.veggieIcons?.[2] || '🎃'}</span></div>
         </div>
         <div class="map-title">${map.name}</div>
-        <div class="map-caption">${(map.veggieIcons || []).join('  ')} · ${map.wavesToWin} waves</div>
+        <div class="map-caption">${unlocked ? `${(map.veggieIcons || []).join('  ')} · ${map.wavesToWin} waves` : unlockText}</div>
       </div>
       <div class="map-footer">
-        <div class="best">★ ${save.best[map.id] || 0}</div>
-        <div class="play-chip">▶ Play</div>
+        <div class="best">${completed ? '🏆 Cleared' : `★ ${save.best?.[map.id] || 0}`}</div>
+        <div class="play-chip">${unlocked ? '▶ Play' : 'Locked'}</div>
       </div>
     `;
-    card.addEventListener('click', () => startMap(map));
+    if (unlocked) card.addEventListener('click', () => startMap(map));
+    else card.addEventListener('click', () => showToast(unlockText));
     mapGrid.appendChild(card);
   });
 }
@@ -195,8 +227,10 @@ function startWave() {
   state.waveActive = true;
   buildPanel.classList.add('hidden');
   selectedPad = null;
-  if (state.wave % 5 === 0) showToast('🎃 Boss veggie wave');
-  else showToast(`🌱 Wave ${state.wave}`);
+  if (state.wave % 5 === 0) {
+    state.effects.push({ type: 'bossText', x: canvas.width / 2, y: 118, color: '#facc15', life: 1.35, max: 1.35 });
+    showToast('🎃 Boss veggie wave');
+  } else showToast(`🌱 Wave ${state.wave}`);
   updateUI();
 }
 
@@ -298,9 +332,9 @@ function update(dt, now) {
     state.gold += 35 + state.wave * 5;
     state.score += 100 + state.wave * 10;
     if (state.wave >= state.map.wavesToWin) state.won = true;
+    recordProgress(state.wave);
     state.wave += 1;
-    saveGame();
-    showToast('Wave cleared · bonus gold');
+    showToast(state.won ? '🏆 Map cleared · new unlocks!' : 'Wave cleared · bonus gold');
   }
   updateUI();
 }
@@ -416,6 +450,65 @@ function drawTower(tower, now) {
   }
 }
 
+
+function drawGlossyVeggie(enemy, now) {
+  const slowed = enemy.slowUntil > now;
+  const burning = enemy.burnUntil > now;
+  const r = enemy.radius + (enemy.type === 'boss' ? 11 : 8);
+  ctx.save();
+  ctx.shadowColor = burning ? '#fb7185' : (slowed ? '#67e8f9' : 'rgba(0,0,0,.45)');
+  ctx.shadowBlur = burning || slowed ? 18 : 8;
+  const grad = ctx.createRadialGradient(enemy.x - r * .35, enemy.y - r * .42, 2, enemy.x, enemy.y, r + 8);
+  grad.addColorStop(0, 'rgba(255,255,255,.92)');
+  grad.addColorStop(.22, 'rgba(255,255,255,.30)');
+  grad.addColorStop(.62, enemy.color || '#84cc16');
+  grad.addColorStop(1, 'rgba(2,6,23,.78)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,.42)';
+  ctx.beginPath();
+  ctx.ellipse(enemy.x - r * .28, enemy.y - r * .34, r * .22, r * .12, -0.55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(2,6,23,.35)';
+  ctx.beginPath();
+  ctx.ellipse(enemy.x, enemy.y + r + 5, r * .75, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = `${enemy.type === 'boss' ? 34 : enemy.type === 'brute' ? 28 : 23}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(enemy.emoji || '🥕', enemy.x, enemy.y + 1);
+  if (enemy.type === 'shield') {
+    ctx.strokeStyle = 'rgba(248,250,252,.95)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, r + 6, -0.95, 0.95);
+    ctx.stroke();
+  }
+  if (enemy.type === 'boss') {
+    ctx.fillStyle = 'rgba(2,6,23,.82)';
+    ctx.beginPath();
+    ctx.roundRect(enemy.x - 18, enemy.y - r - 24, 36, 18, 8);
+    ctx.fill();
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 10px system-ui';
+    ctx.fillText('BOSS', enemy.x, enemy.y - r - 15);
+  }
+  const hpw = enemy.type === 'boss' ? 72 : 48;
+  const hpPct = Math.max(0, enemy.hp / enemy.maxHp);
+  ctx.fillStyle = 'rgba(15,23,42,.96)';
+  ctx.beginPath();
+  ctx.roundRect(enemy.x - hpw / 2, enemy.y - r - 13, hpw, 7, 4);
+  ctx.fill();
+  ctx.fillStyle = hpPct > .45 ? '#22c55e' : (hpPct > .2 ? '#facc15' : '#ef4444');
+  ctx.beginPath();
+  ctx.roundRect(enemy.x - hpw / 2, enemy.y - r - 13, hpw * hpPct, 7, 4);
+  ctx.fill();
+  ctx.restore();
+}
+
 function draw(now) {
   if (!state) return;
   const [bg, pathColor] = state.map.theme;
@@ -457,40 +550,7 @@ function draw(now) {
 
   for (const tower of state.towers) drawTower(tower, now);
 
-  for (const enemy of state.enemies) {
-    const slowed = enemy.slowUntil > now;
-    const burning = enemy.burnUntil > now;
-    ctx.shadowColor = burning ? '#fb7185' : (slowed ? '#67e8f9' : 'rgba(0,0,0,.35)');
-    ctx.shadowBlur = burning || slowed ? 14 : 6;
-    ctx.fillStyle = 'rgba(255,255,255,.14)';
-    ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 6, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(2,6,23,.36)';
-    ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y + enemy.radius + 7, enemy.radius + 2, 5, 0, 0, Math.PI * 2); ctx.fill();
-    const fontSize = enemy.type === 'boss' ? 36 : (enemy.type === 'brute' ? 30 : 24);
-    ctx.font = `${fontSize}px system-ui`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(enemy.emoji || '🥕', enemy.x, enemy.y + 1);
-
-    if (enemy.type === 'shield') {
-      ctx.strokeStyle = 'rgba(248,250,252,.9)';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 8, -0.9, 0.95); ctx.stroke();
-    }
-    if (enemy.type === 'boss') {
-      ctx.fillStyle = 'rgba(2,6,23,.78)';
-      ctx.beginPath(); ctx.roundRect(enemy.x - 13, enemy.y - enemy.radius - 34, 26, 18, 8); ctx.fill();
-      ctx.fillStyle = '#fef08a';
-      ctx.font = 'bold 11px system-ui';
-      ctx.fillText('BOSS', enemy.x, enemy.y - enemy.radius - 25);
-    }
-
-    const hpw = enemy.type === 'boss' ? 64 : 44;
-    const hpPct = Math.max(0, enemy.hp / enemy.maxHp);
-    ctx.fillStyle = 'rgba(15,23,42,.92)'; ctx.fillRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 16, hpw, 7);
-    ctx.fillStyle = hpPct > .45 ? '#22c55e' : (hpPct > .2 ? '#facc15' : '#ef4444');
-    ctx.fillRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 16, hpw * hpPct, 7);
-  }
+  for (const enemy of state.enemies) drawGlossyVeggie(enemy, now);
 
   for (const p of state.projectiles) {
     ctx.strokeStyle = p.color;
@@ -506,7 +566,13 @@ function draw(now) {
     ctx.globalAlpha = pct;
     ctx.strokeStyle = fx.color;
     ctx.lineWidth = 4;
-    if (fx.type === 'ring' || fx.type === 'pop' || fx.type === 'leak') {
+    if (fx.type === 'bossText') {
+      ctx.fillStyle = fx.color;
+      ctx.font = 'bold 40px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🎃 BOSS VEGGIE WAVE', fx.x, fx.y - (1 - pct) * 18);
+    } else if (fx.type === 'ring' || fx.type === 'pop' || fx.type === 'leak') {
       const r = (fx.radius || 34) * (1.2 - pct);
       ctx.beginPath(); ctx.arc(fx.x, fx.y, r, 0, Math.PI * 2); ctx.stroke();
     }
@@ -558,21 +624,26 @@ function formatFireRate(rate, level = 1) {
   return `${(1 / (rate / level)).toFixed(1)}/s`;
 }
 
-function renderInfoPanel() {
+function renderInfoPanel(force = false) {
   if (!state || !selectedTower) {
     infoPanel.classList.add('hidden');
+    infoPanelLastKey = '';
     return;
   }
   const tower = selectedTower;
   const def = TOWERS[tower.kind];
-  const upgradeCost = 60 * tower.level + def.cost;
+  const upgradeCost = Math.floor(def.cost * 0.45 + 35 * tower.level);
   const sellValue = Math.floor(def.cost * 0.55 * tower.level);
   const maxed = tower.level >= 3;
+  const canUpgrade = !maxed && state.gold >= upgradeCost;
+  const key = `${tower.kind}-${tower.level}-${Math.floor(state.gold)}-${selectedTower.x}-${selectedTower.y}`;
+  if (!force && infoPanelLastKey === key) return;
+  infoPanelLastKey = key;
   infoPanel.innerHTML = `
     <div class="info-title">
       <div class="tower-icon" style="background:${def.dark}; color:${def.color};">${def.icon}</div>
       <div>
-        <h3>${def.name} Tower · Level ${tower.level}</h3>
+        <h3>${def.name} Tower · Lv ${tower.level}</h3>
         <p>${def.role} · ${def.note}</p>
       </div>
     </div>
@@ -580,28 +651,22 @@ function renderInfoPanel() {
       <div class="mini-stat"><span>Damage</span><b>${Math.round(def.damage * tower.level)}</b></div>
       <div class="mini-stat"><span>Range</span><b>${tower.range}</b></div>
       <div class="mini-stat"><span>Rate</span><b>${formatFireRate(tower.fireRate, tower.level)}</b></div>
-      <div class="mini-stat"><span>Upgrade</span><b>${maxed ? 'Max' : upgradeCost}</b></div>
-      <div class="mini-stat"><span>Sell</span><b>+${sellValue}</b></div>
+      <div class="mini-stat"><span>Upgrade</span><b>${maxed ? 'Max' : upgradeCost + 'g'}</b></div>
+      <div class="mini-stat"><span>Sell</span><b>+${sellValue}g</b></div>
+      <div class="mini-stat"><span>Gold</span><b>${Math.floor(state.gold)}g</b></div>
     </div>
     <div class="panel-actions">
-      <button id="infoUpgrade" ${maxed || state.gold < upgradeCost ? 'disabled' : ''}>${maxed ? 'Max Level' : `Upgrade · ${upgradeCost}`}</button>
-      <button id="infoSell" class="ghost">Sell · +${sellValue}</button>
-      <button id="infoClose" class="ghost">Close</button>
+      <button data-action="upgrade" ${canUpgrade ? '' : 'disabled'}>${maxed ? 'Max Level' : `Upgrade · ${upgradeCost}g`}</button>
+      <button data-action="sell" class="ghost">Sell · +${sellValue}g</button>
+      <button data-action="close" class="ghost">Close</button>
     </div>
   `;
   infoPanel.classList.remove('hidden');
-  document.getElementById('infoUpgrade').onclick = () => upgradeTower(tower);
-  document.getElementById('infoSell').onclick = () => sellTower(tower);
-  document.getElementById('infoClose').onclick = () => {
-    selectedTower = null;
-    selectedPad = null;
-    infoPanel.classList.add('hidden');
-  };
 }
 
 function upgradeTower(tower) {
   const def = TOWERS[tower.kind];
-  const upgradeCost = 60 * tower.level + def.cost;
+  const upgradeCost = Math.floor(def.cost * 0.45 + 35 * tower.level);
   if (tower.level >= 3) return showToast('Tower already maxed');
   if (state.gold < upgradeCost) return showToast('Not enough gold');
   state.gold -= upgradeCost;
@@ -610,6 +675,7 @@ function upgradeTower(tower) {
   tower.flash = 0.4;
   state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: def.color, life: 0.45, max: 0.45, radius: tower.range });
   showToast(`${def.name} upgraded to level ${tower.level}`);
+  infoPanelLastKey = '';
   updateUI();
 }
 
@@ -640,20 +706,25 @@ function openBuildPanel(pad) {
   const grid = buildPanel.querySelector('.tower-grid');
   Object.entries(TOWERS).forEach(([kind, t]) => {
     const btn = document.createElement('button');
-    btn.className = 'tower-choice';
-    btn.disabled = state.gold < t.cost;
+    const unlocked = isTowerUnlocked(kind);
+    btn.className = `tower-choice ${unlocked ? '' : 'locked-tower'}`;
+    btn.disabled = !unlocked || state.gold < t.cost;
     btn.style.background = `linear-gradient(145deg, ${t.dark}dd, rgba(255,255,255,.06))`;
+    const unlockLabel = unlocked ? `${t.cost}g` : `🔒 Map ${towerUnlocks[kind] + 1}`;
     btn.innerHTML = `
-      <span class="top"><span class="icon" style="color:${t.color}; background:${t.dark};">${t.icon}</span><span class="cost">${t.cost}g</span></span>
+      <span class="top"><span class="icon" style="color:${t.color}; background:${t.dark};">${t.icon}</span><span class="cost">${unlockLabel}</span></span>
       <b>${t.name}</b>
       <small>${t.role}<br>${t.note}</small>
+      <span class="strategy">${unlocked ? t.strategy : 'Clear earlier maps to unlock.'}</span>
     `;
     btn.onclick = () => {
+      if (!unlocked) return showToast(`${t.name} unlocks later`);
       if (state.gold < t.cost) return showToast('Not enough gold');
       state.gold -= t.cost;
       const tower = { kind, x: pad[0], y: pad[1], level: 1, cooldown: 0, ...t };
       state.towers.push(tower);
       selectedTower = tower;
+      infoPanelLastKey = '';
       buildPanel.classList.add('hidden');
       state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: t.color, life: 0.36, max: 0.36, radius: 70 });
       showToast(`${t.name} tower built`);
@@ -672,8 +743,23 @@ function selectExistingTower(tower) {
   selectedTower = tower;
   selectedPad = [tower.x, tower.y];
   buildPanel.classList.add('hidden');
-  renderInfoPanel();
+  infoPanelLastKey = '';
+  renderInfoPanel(true);
 }
+
+infoPanel.addEventListener('click', event => {
+  const button = event.target.closest('button[data-action]');
+  if (!button || !selectedTower) return;
+  const action = button.dataset.action;
+  if (action === 'upgrade') upgradeTower(selectedTower);
+  if (action === 'sell') sellTower(selectedTower);
+  if (action === 'close') {
+    selectedTower = null;
+    selectedPad = null;
+    infoPanel.classList.add('hidden');
+    infoPanelLastKey = '';
+  }
+});
 
 canvas.addEventListener('pointerdown', event => {
   if (!state || state.gameOver) return;
