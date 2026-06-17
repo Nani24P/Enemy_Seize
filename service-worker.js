@@ -1,4 +1,4 @@
-const CACHE_NAME = 'siege-forge-v1-6-beautified-ui';
+const CACHE_NAME = 'siege-forge-v1-8-veggie-ui';
 const ASSETS = [
   './', './index.html', './manifest.json', './src/styles.css', './src/main.js',
   './data/maps.js', './data/towers.js', './data/enemies.js',

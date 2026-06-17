@@ -39,8 +39,51 @@ const ui = {
   scoreText: document.getElementById('scoreText')
 };
 
-const mapIcons = { grass: '🌿', desert: '🏜️', ice: '🧊', lava: '🌋', temple: '🏛️' };
-const saveKey = 'siege-forge-save-v1-6-ui';
+const enemyVisuals = {
+  grass: { goblin: '🍅', runner: '🥕', brute: '🍉', shield: '🧅', boss: '🎃' },
+  desert: { goblin: '🧅', runner: '🥕', brute: '🎃', shield: '🥔', boss: '🍉' },
+  ice: { goblin: '🫛', runner: '🧅', brute: '🍈', shield: '🥬', boss: '🎃' },
+  lava: { goblin: '🌶️', runner: '🫑', brute: '🎃', shield: '🥕', boss: '🍉' },
+  temple: { goblin: '🥔', runner: '🧄', brute: '🎃', shield: '🧅', boss: '🍉' }
+};
+
+const mapDecor = {
+  grass: [
+    ['🌲', 66, 66, 36, .7], ['🌳', 136, 470, 34, .7], ['🦊', 908, 440, 28, .8], ['🦋', 826, 74, 22, .8],
+    ['🍄', 772, 486, 20, .8], ['🌿', 554, 512, 24, .6], ['🐇', 46, 458, 24, .85], ['🌼', 930, 86, 20, .78],
+    ['🌱', 364, 22, 20, .8], ['🪵', 880, 206, 22, .7], ['🌲', 922, 298, 30, .66], ['🪲', 58, 180, 18, .85]
+  ],
+  desert: [
+    ['🌵', 68, 72, 32, .72], ['🌵', 900, 412, 30, .72], ['🪨', 842, 62, 28, .72], ['🐪', 110, 506, 26, .82],
+    ['☀️', 912, 98, 28, .88], ['🦂', 782, 512, 20, .86], ['🏺', 532, 42, 22, .72], ['🌵', 696, 104, 28, .74],
+    ['🦎', 64, 282, 18, .82], ['🪨', 276, 34, 20, .76], ['🏜️', 938, 254, 18, .58]
+  ],
+  ice: [
+    ['❄️', 72, 74, 28, .78], ['🧊', 904, 84, 32, .72], ['🐧', 900, 458, 28, .82], ['❄️', 64, 468, 30, .72],
+    ['☃️', 468, 520, 26, .78], ['🦭', 812, 256, 22, .82], ['❅', 234, 42, 24, .82], ['🧊', 632, 522, 24, .7],
+    ['🐟', 926, 296, 18, .84], ['❄️', 390, 26, 20, .8], ['🫧', 832, 516, 18, .76]
+  ],
+  lava: [
+    ['🌋', 72, 68, 34, .76], ['🔥', 918, 76, 30, .82], ['🪨', 80, 472, 28, .76], ['🦂', 902, 438, 18, .86],
+    ['🔥', 676, 516, 24, .82], ['🐉', 870, 262, 24, .62], ['🪨', 356, 520, 22, .78], ['♨️', 236, 30, 20, .74],
+    ['🔥', 884, 154, 22, .8], ['🌋', 514, 18, 22, .72], ['🪨', 938, 330, 18, .74]
+  ],
+  temple: [
+    ['🏛️', 70, 44, 28, .82], ['🕯️', 914, 84, 22, .8], ['🦉', 896, 494, 22, .84], ['🔮', 516, 148, 20, .84],
+    ['🏺', 82, 500, 24, .82], ['✨', 922, 224, 20, .8], ['🪷', 638, 510, 22, .82], ['🕯️', 290, 28, 18, .78],
+    ['🐍', 936, 356, 18, .84], ['✦', 162, 110, 18, .74], ['🏺', 944, 532, 20, .74]
+  ]
+};
+
+const terrainScatter = {
+  grass: { color: 'rgba(74, 222, 128, 0.08)', count: 24, size: 42 },
+  desert: { color: 'rgba(251, 191, 36, 0.07)', count: 22, size: 44 },
+  ice: { color: 'rgba(103, 232, 249, 0.08)', count: 24, size: 40 },
+  lava: { color: 'rgba(251, 113, 133, 0.07)', count: 22, size: 46 },
+  temple: { color: 'rgba(192, 132, 252, 0.07)', count: 20, size: 44 }
+};
+
+const saveKey = 'siege-forge-save-v1-8-veggie-ui';
 let state;
 let selectedPad = null;
 let selectedTower = null;
@@ -62,7 +105,7 @@ function showToast(text) {
   toast.textContent = text;
   toast.classList.remove('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.add('hidden'), 1450);
+  toastTimer = setTimeout(() => toast.classList.add('hidden'), 1500);
 }
 function showMenu() {
   menu.classList.add('active');
@@ -78,18 +121,24 @@ function showGame() {
 function renderMapCards() {
   const save = loadSave();
   mapGrid.innerHTML = '';
-  MAPS.forEach((map, index) => {
+  MAPS.forEach((map) => {
     const card = document.createElement('article');
     card.className = 'map-card';
+    card.style.background = `linear-gradient(160deg, ${map.theme[1]}aa, rgba(255,255,255,.04))`;
     card.style.setProperty('--map-accent', map.theme[2]);
-    card.style.background = `linear-gradient(150deg, ${map.theme[1]}88, rgba(255,255,255,.045))`;
     card.innerHTML = `
       <div>
-        <span class="realm-icon">${mapIcons[map.id] || '🛡️'}</span>
-        <h3>${index + 1}. ${map.name}</h3>
-        <small>${map.description}</small>
+        <div class="map-head">
+          <span class="map-hero-icon">${map.icon || '🗺️'}</span>
+          <div class="map-mini-icons"><span>${map.veggieIcons[0]}</span><span>${map.veggieIcons[1]}</span><span>${map.veggieIcons[2]}</span></div>
+        </div>
+        <div class="map-title">${map.name}</div>
+        <div class="map-caption">${map.veggieIcons.join('  ')} · ${map.wavesToWin} waves</div>
       </div>
-      <div class="best">Best Score: ${save.best[map.id] || 0}</div>
+      <div class="map-footer">
+        <div class="best">★ ${save.best[map.id] || 0}</div>
+        <div class="play-chip">▶ Play</div>
+      </div>
     `;
     card.addEventListener('click', () => startMap(map));
     mapGrid.appendChild(card);
@@ -118,12 +167,12 @@ function startMap(map) {
   };
   selectedPad = null;
   selectedTower = null;
-  ui.mapName.textContent = `${mapIcons[map.id] || '🛡️'} ${map.name}`;
+  ui.mapName.textContent = `${map.icon || '🗺️'} ${map.name}`;
   showGame();
   updateUI();
   renderInfoPanel();
   draw(0);
-  showToast('Tap a glowing green pad to build');
+  showToast('Build on a glowing pad');
 }
 
 function updateUI() {
@@ -133,9 +182,9 @@ function updateUI() {
   ui.livesText.textContent = state.lives;
   ui.scoreText.textContent = state.score;
   startWaveBtn.disabled = state.waveActive || state.gameOver;
-  startWaveBtn.textContent = state.won ? 'Endless Wave' : 'Start Wave';
-  pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
-  speedBtn.textContent = `Speed x${state.speed}`;
+  startWaveBtn.textContent = state.won ? '▶ Endless' : '▶ Wave';
+  pauseBtn.textContent = state.paused ? '▶' : '⏸';
+  speedBtn.textContent = `⏩ x${state.speed}`;
   renderInfoPanel();
 }
 
@@ -159,8 +208,11 @@ function startWave() {
   state.waveActive = true;
   buildPanel.classList.add('hidden');
   selectedPad = null;
-  showToast(state.wave % 5 === 0 ? '⚠️ Boss wave incoming' : `Wave ${state.wave} started`);
+  showToast(state.wave % 5 === 0 ? '🎃 Boss veggie wave' : `🌱 Wave ${state.wave}`);
   updateUI();
+}
+function getEnemyEmoji(mapId, type) {
+  return enemyVisuals[mapId]?.[type] || '🥕';
 }
 function spawnEnemy(type) {
   const def = ENEMIES[type];
@@ -171,6 +223,7 @@ function spawnEnemy(type) {
   state.enemies.push({
     type,
     ...def,
+    emoji: getEnemyEmoji(state.map.id, type),
     maxHp: Math.floor(def.hp * scale),
     hp: Math.floor(def.hp * scale),
     speed: def.speed * (state.map.id === 'lava' ? 1.12 : 1),
@@ -202,7 +255,10 @@ function update(dt, now) {
     const dy = target[1] - enemy.y;
     const d = Math.hypot(dx, dy);
     if (d < 4) enemy.pathIndex += 1;
-    else { enemy.x += (dx / d) * speed * dt; enemy.y += (dy / d) * speed * dt; }
+    else {
+      enemy.x += (dx / d) * speed * dt;
+      enemy.y += (dy / d) * speed * dt;
+    }
   }
 
   for (const tower of state.towers) {
@@ -236,7 +292,12 @@ function update(dt, now) {
   }
   state.enemies = state.enemies.filter(e => e.hp > 0 && !e.reached);
 
-  if (state.lives <= 0) { state.gameOver = true; state.lives = 0; saveGame(); showToast('Game over'); }
+  if (state.lives <= 0) {
+    state.gameOver = true;
+    state.lives = 0;
+    saveGame();
+    showToast('Game over');
+  }
   if (state.waveActive && state.spawnQueue.length === 0 && state.enemies.length === 0) {
     state.waveActive = false;
     state.gold += 35 + state.wave * 5;
@@ -244,7 +305,7 @@ function update(dt, now) {
     if (state.wave >= state.map.wavesToWin) state.won = true;
     state.wave += 1;
     saveGame();
-    showToast('Wave cleared · bonus gold');
+    showToast('Wave cleared');
   }
   updateUI();
 }
@@ -263,7 +324,10 @@ function fireTower(tower, target, now) {
     target.slowUntil = now + def.slowTime;
     state.effects.push({ type: 'ring', x: target.x, y: target.y, color: def.color, life: 0.22, max: 0.22, radius: 30 });
   }
-  if (def.burn) { target.burnDps = def.burn * tower.level; target.burnUntil = now + def.burnTime; }
+  if (def.burn) {
+    target.burnDps = def.burn * tower.level;
+    target.burnUntil = now + def.burnTime;
+  }
   if (def.chain) {
     state.enemies.filter(e => e !== target && e.hp > 0 && dist(e, target) <= 120).slice(0, def.chain + tower.level - 1).forEach(e => {
       applyDamage(e, damage * 0.65, tower.kind);
@@ -277,35 +341,50 @@ function applyDamage(enemy, amount, kind) {
   enemy.hp -= final;
 }
 
+function drawTerrainScatter(map) {
+  const spec = terrainScatter[map.id] || terrainScatter.grass;
+  ctx.fillStyle = spec.color;
+  for (let i = 0; i < spec.count; i++) {
+    const x = ((i * 137) % canvas.width);
+    const y = ((i * 97 + 43) % canvas.height);
+    const size = spec.size + (i % 5) * 7;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawMapDecoration(map) {
-  const decorative = {
-    grass: [['🌳',72,74],['🌲',896,430],['🌿',790,72],['🍄',430,505]],
-    desert: [['🌵',88,84],['☀️',874,62],['🪨',510,84],['🌵',720,466]],
-    ice: [['❄️',86,88],['🧊',822,96],['❅',490,492],['❄️',720,420]],
-    lava: [['🌋',90,78],['🔥',805,88],['🪨',355,478],['🔥',878,420]],
-    temple: [['🏛️',80,42],['🔮',855,150],['✦',520,148],['🏺',120,470]]
-  }[map.id] || [];
-  ctx.globalAlpha = .34;
-  ctx.font = '30px system-ui';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (const [icon, x, y] of decorative) ctx.fillText(icon, x, y);
+  drawTerrainScatter(map);
+  const decorative = mapDecor[map.id] || [];
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const [icon, x, y, size, alpha] of decorative) {
+    ctx.globalAlpha = alpha;
+    ctx.font = `${size}px system-ui`;
+    ctx.fillText(icon, x, y);
+  }
   ctx.globalAlpha = 1;
 }
 
 function drawGridPath(path, color) {
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.lineWidth = 58;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 64;
   ctx.strokeStyle = 'rgba(2, 6, 23, 0.56)';
   ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
-  ctx.lineWidth = 42;
+  ctx.lineWidth = 50;
   const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
   grad.addColorStop(0, color);
   grad.addColorStop(1, 'rgba(15,23,42,.92)');
   ctx.strokeStyle = grad;
   ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
-  ctx.lineWidth = 3;
-  ctx.setLineDash([12, 16]);
-  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(255,255,255,.09)';
+  ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([10, 14]);
+  ctx.strokeStyle = 'rgba(255,255,255,.20)';
   ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
   ctx.setLineDash([]);
 }
@@ -353,7 +432,7 @@ function drawTowerBody(tower, def, size, isSelected) {
   ctx.restore();
 }
 
-function drawTower(tower, now) {
+function drawTower(tower) {
   const def = TOWERS[tower.kind];
   const isSelected = selectedTower === tower;
   if (isSelected) {
@@ -371,6 +450,46 @@ function drawTower(tower, now) {
   }
 }
 
+function drawEnemy(enemy, now) {
+  const slowed = enemy.slowUntil > now;
+  const burning = enemy.burnUntil > now;
+  ctx.shadowColor = burning ? '#fb7185' : (slowed ? '#67e8f9' : 'rgba(0,0,0,.35)');
+  ctx.shadowBlur = burning || slowed ? 14 : 6;
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  ctx.beginPath();
+  ctx.arc(enemy.x, enemy.y, enemy.radius + 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(2,6,23,.36)';
+  ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y + enemy.radius + 7, enemy.radius + 2, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+  const fontSize = enemy.type === 'boss' ? 36 : (enemy.type === 'brute' ? 30 : 24);
+  ctx.font = `${fontSize}px system-ui`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(enemy.emoji, enemy.x, enemy.y + 1);
+
+  if (enemy.type === 'shield') {
+    ctx.strokeStyle = 'rgba(248,250,252,.92)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 8, -0.9, 0.95); ctx.stroke();
+  }
+  if (enemy.type === 'boss') {
+    ctx.fillStyle = 'rgba(2,6,23,.78)';
+    ctx.beginPath(); ctx.roundRect(enemy.x - 13, enemy.y - enemy.radius - 34, 26, 18, 8); ctx.fill();
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 11px system-ui';
+    ctx.fillText('BOSS', enemy.x, enemy.y - enemy.radius - 25);
+  }
+
+  const hpw = enemy.type === 'boss' ? 72 : 48;
+  const hpPct = Math.max(0, enemy.hp / enemy.maxHp);
+  ctx.fillStyle = 'rgba(15,23,42,.96)';
+  ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 20, hpw, 8, 4); ctx.fill();
+  ctx.fillStyle = hpPct > .45 ? '#22c55e' : (hpPct > .2 ? '#facc15' : '#ef4444');
+  ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 20, hpw * hpPct, 8, 4); ctx.fill();
+}
+
 function draw(now) {
   if (!state) return;
   const [bg, pathColor, accent] = state.map.theme;
@@ -379,14 +498,15 @@ function draw(now) {
   gradient.addColorStop(0, bg);
   gradient.addColorStop(.56, '#0f172a');
   gradient.addColorStop(1, '#020617');
-  ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.globalAlpha = .55;
-  for (let x = 0; x < canvas.width; x += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-  for (let y = 0; y < canvas.height; y += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+  ctx.globalAlpha = .32;
+  for (let x = 0; x < canvas.width; x += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+  for (let y = 0; y < canvas.height; y += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
   ctx.globalAlpha = 1;
-  drawMapDecoration(state.map);
 
+  drawMapDecoration(state.map);
   drawGridPath(state.map.path, pathColor);
   if (state.map.secondPath) drawGridPath(state.map.secondPath, pathColor);
 
@@ -394,42 +514,29 @@ function draw(now) {
     const occupied = state.towers.some(t => Math.hypot(t.x - x, t.y - y) < 10);
     const isSelected = selectedPad && selectedPad[0] === x && selectedPad[1] === y;
     ctx.shadowColor = occupied ? 'transparent' : '#86efac';
-    ctx.shadowBlur = occupied ? 0 : 12;
+    ctx.shadowBlur = occupied ? 0 : 14;
     ctx.fillStyle = occupied ? 'rgba(255,255,255,.10)' : 'rgba(34,197,94,.32)';
-    ctx.strokeStyle = isSelected ? '#facc15' : (occupied ? 'rgba(255,255,255,.26)' : 'rgba(187,247,208,.86)');
+    ctx.strokeStyle = isSelected ? '#facc15' : (occupied ? 'rgba(255,255,255,.26)' : 'rgba(187,247,208,.88)');
     ctx.lineWidth = isSelected ? 4 : 2.5;
     ctx.beginPath(); ctx.roundRect(x - 27, y - 27, 54, 54, 16); ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
     if (!occupied) {
-      ctx.fillStyle = 'rgba(248,250,252,.78)'; ctx.font = 'bold 24px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+', x, y + 1);
+      ctx.fillStyle = 'rgba(248,250,252,.84)';
+      ctx.font = 'bold 24px system-ui';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('+', x, y + 1);
     }
   }
 
-  for (const tower of state.towers) drawTower(tower, now);
-
-  for (const enemy of state.enemies) {
-    const slowed = enemy.slowUntil > now;
-    const burning = enemy.burnUntil > now;
-    ctx.shadowColor = burning ? '#fb7185' : (slowed ? '#67e8f9' : 'rgba(0,0,0,.35)');
-    ctx.shadowBlur = burning || slowed ? 13 : 5;
-    const enemyGrad = ctx.createRadialGradient(enemy.x - 5, enemy.y - 6, 2, enemy.x, enemy.y, enemy.radius + 7);
-    enemyGrad.addColorStop(0, '#f8fafc'); enemyGrad.addColorStop(.26, enemy.color); enemyGrad.addColorStop(1, '#020617');
-    ctx.fillStyle = enemyGrad;
-    ctx.strokeStyle = slowed ? '#67e8f9' : '#020617'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.shadowBlur = 0;
-    if (enemy.type === 'shield') { ctx.strokeStyle = 'rgba(248,250,252,.92)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 6, -0.9, 0.95); ctx.stroke(); }
-    if (enemy.type === 'boss') { ctx.fillStyle = '#020617'; ctx.font = 'bold 15px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('B', enemy.x, enemy.y + 1); }
-    const hpw = enemy.type === 'boss' ? 68 : 46;
-    const hpPct = Math.max(0, enemy.hp / enemy.maxHp);
-    ctx.fillStyle = 'rgba(15,23,42,.96)'; ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 18, hpw, 8, 4); ctx.fill();
-    ctx.fillStyle = hpPct > .45 ? '#22c55e' : (hpPct > .2 ? '#facc15' : '#ef4444'); ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 18, hpw * hpPct, 8, 4); ctx.fill();
-  }
+  for (const tower of state.towers) drawTower(tower);
+  for (const enemy of state.enemies) drawEnemy(enemy, now);
 
   for (const p of state.projectiles) {
     ctx.strokeStyle = p.color;
     ctx.lineWidth = p.kind === 'storm' ? 4 : (p.kind === 'arrow' ? 3 : 5);
-    ctx.lineCap = 'round'; ctx.shadowColor = p.color; ctx.shadowBlur = 11;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 11;
     ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.tx, p.ty); ctx.stroke();
     if (p.kind === 'cannon') { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.tx, p.ty, 5, 0, Math.PI * 2); ctx.fill(); }
     ctx.shadowBlur = 0;
@@ -438,28 +545,39 @@ function draw(now) {
   for (const fx of state.effects) {
     const pct = Math.max(0, fx.life / fx.max);
     ctx.globalAlpha = pct;
-    ctx.strokeStyle = fx.color; ctx.lineWidth = 4;
+    ctx.strokeStyle = fx.color;
+    ctx.lineWidth = 4;
     const r = (fx.radius || 34) * (1.25 - pct);
     ctx.beginPath(); ctx.arc(fx.x, fx.y, r, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
   for (const f of state.floating) {
     const pct = Math.max(0, f.life / f.max);
-    ctx.globalAlpha = pct; ctx.fillStyle = f.color || '#facc15'; ctx.font = 'bold 21px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = pct;
+    ctx.fillStyle = f.color || '#facc15';
+    ctx.font = 'bold 21px system-ui';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(f.text, f.x, f.y - (1 - pct) * 44);
     ctx.globalAlpha = 1;
   }
 
   if (state.paused) {
-    ctx.fillStyle = 'rgba(2,6,23,.54)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.font = 'bold 44px system-ui'; ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = 'rgba(2,6,23,.54)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 44px system-ui';
+    ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
   }
   if (state.gameOver || state.won) {
-    ctx.fillStyle = 'rgba(2,6,23,.72)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.font = 'bold 48px system-ui';
+    ctx.fillStyle = 'rgba(2,6,23,.72)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 48px system-ui';
     ctx.fillText(state.gameOver ? 'Game Over' : 'Map Cleared!', canvas.width / 2, 230);
     ctx.font = '24px system-ui';
-    ctx.fillText(state.gameOver ? 'Try a stronger choke point next run.' : 'Continue into endless waves or return to maps.', canvas.width / 2, 275);
+    ctx.fillText(state.gameOver ? 'Try a stronger veggie choke point.' : 'Continue into endless waves or return to maps.', canvas.width / 2, 275);
   }
 }
 
@@ -480,7 +598,7 @@ function formatFireRate(rate, level = 1) { return `${(1 / (rate / level)).toFixe
 
 function renderEmptyInfoPanel() {
   infoPanel.className = 'info-panel empty-state';
-  infoPanel.innerHTML = `<div class="empty-orb">＋</div><b>No tower selected</b><span>Tap a tower to see range, stats, upgrade cost, and sell value.</span>`;
+  infoPanel.innerHTML = `<div class="empty-orb">＋</div><b>No tower selected</b><span>Tap a tower to see stats, range, upgrade cost, and sell value.</span>`;
 }
 function renderInfoPanel() {
   if (!state || !selectedTower) return renderEmptyInfoPanel();
@@ -524,22 +642,33 @@ function upgradeTower(tower) {
   const upgradeCost = 60 * tower.level + def.cost;
   if (tower.level >= 3) return showToast('Tower already maxed');
   if (state.gold < upgradeCost) return showToast('Not enough gold');
-  state.gold -= upgradeCost; tower.level += 1; tower.range += 10; tower.flash = 0.45;
+  state.gold -= upgradeCost;
+  tower.level += 1;
+  tower.range += 10;
+  tower.flash = 0.45;
   state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: def.color, life: 0.48, max: 0.48, radius: tower.range });
-  showToast(`${def.icon} ${def.name} upgraded to level ${tower.level}`); updateUI();
+  showToast(`${def.icon} ${def.name} upgraded`);
+  updateUI();
 }
 function sellTower(tower) {
   const def = TOWERS[tower.kind];
   const sellValue = Math.floor(def.cost * 0.55 * tower.level);
-  state.gold += sellValue; state.towers = state.towers.filter(t => t !== tower);
-  selectedTower = null; selectedPad = null; buildPanel.classList.add('hidden'); renderInfoPanel();
-  showToast(`${def.icon} ${def.name} sold`); updateUI();
+  state.gold += sellValue;
+  state.towers = state.towers.filter(t => t !== tower);
+  selectedTower = null;
+  selectedPad = null;
+  buildPanel.classList.add('hidden');
+  renderInfoPanel();
+  showToast(`${def.icon} ${def.name} sold`);
+  updateUI();
 }
 function openBuildPanel(pad) {
-  selectedPad = pad; selectedTower = null; renderInfoPanel();
+  selectedPad = pad;
+  selectedTower = null;
+  renderInfoPanel();
   buildPanel.innerHTML = `
     <div class="build-heading">
-      <div><b>Choose Tower</b><br><span>Gold available: ${Math.floor(state.gold)} · each tower has a clear role</span></div>
+      <div><b>Choose Tower</b><br><span>Gold: ${Math.floor(state.gold)} · each tower has a clear role</span></div>
       <button id="closeBuild" class="ghost">Cancel</button>
     </div>
     <div class="tower-grid"></div>`;
@@ -548,7 +677,6 @@ function openBuildPanel(pad) {
     const btn = document.createElement('button');
     btn.className = `tower-choice ${t.accentClass || ''}`;
     btn.disabled = state.gold < t.cost;
-    btn.style.setProperty('--tower-color', t.color);
     btn.style.background = `linear-gradient(145deg, ${t.dark}f0, rgba(255,255,255,.055))`;
     btn.innerHTML = `
       <span class="top"><span class="icon" style="color:${t.color};">${t.icon}</span><span class="cost">${t.cost}g</span></span>
@@ -559,16 +687,24 @@ function openBuildPanel(pad) {
       if (state.gold < t.cost) return showToast('Not enough gold');
       state.gold -= t.cost;
       const tower = { kind, x: pad[0], y: pad[1], level: 1, cooldown: 0, ...t };
-      state.towers.push(tower); selectedTower = tower; buildPanel.classList.add('hidden');
+      state.towers.push(tower);
+      selectedTower = tower;
+      buildPanel.classList.add('hidden');
       state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: t.color, life: 0.38, max: 0.38, radius: 76 });
-      showToast(`${t.icon} ${t.name} tower built`); updateUI();
+      showToast(`${t.icon} ${t.name} tower built`);
+      updateUI();
     };
     grid.appendChild(btn);
   });
   buildPanel.classList.remove('hidden');
   document.getElementById('closeBuild').onclick = () => { buildPanel.classList.add('hidden'); selectedPad = null; };
 }
-function selectExistingTower(tower) { selectedTower = tower; selectedPad = [tower.x, tower.y]; buildPanel.classList.add('hidden'); renderInfoPanel(); }
+function selectExistingTower(tower) {
+  selectedTower = tower;
+  selectedPad = [tower.x, tower.y];
+  buildPanel.classList.add('hidden');
+  renderInfoPanel();
+}
 
 canvas.addEventListener('pointerdown', event => {
   if (!state || state.gameOver) return;
@@ -580,7 +716,12 @@ canvas.addEventListener('pointerdown', event => {
     const occupied = state.towers.some(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10);
     if (occupied) selectExistingTower(state.towers.find(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10));
     else openBuildPanel(pad);
-  } else { buildPanel.classList.add('hidden'); selectedPad = null; selectedTower = null; renderInfoPanel(); }
+  } else {
+    buildPanel.classList.add('hidden');
+    selectedPad = null;
+    selectedTower = null;
+    renderInfoPanel();
+  }
 });
 
 startWaveBtn.addEventListener('click', startWave);

@@ -17,30 +17,25 @@
   <div class="aurora aurora-two"></div>
 
   <div id="app">
-    <header class="topbar glass">
+    <header class="topbar glass compact">
       <div class="brand-lockup">
         <div class="brand-badge">⚒️</div>
         <div>
           <h1>Siege Forge</h1>
-          <p id="subtitle">Phase 1.5 UI · touch-first tower defense PWA</p>
+          <div class="icon-row" aria-label="Tower icons and themes">
+            <span>🏹</span><span>💣</span><span>❄️</span><span>🔥</span><span>⚡</span>
+          </div>
         </div>
       </div>
-      <button id="installBtn" class="ghost hidden">Install App</button>
+      <button id="installBtn" class="ghost icon-btn hidden" aria-label="Install app">⬇️</button>
     </header>
 
     <main>
-      <section id="menu" class="panel screen active">
-        <div class="menu-hero">
-          <div>
-            <p class="eyebrow">Five handcrafted realms</p>
-            <h2>Build a kill zone. Hold the path.</h2>
-            <p class="muted">Tap a map, tap a glowing build pad, then choose Arrow, Cannon, Frost, Flame, or Storm towers.</p>
-          </div>
-          <div class="combo-card">
-            <span class="combo-icons">❄️ → 💣 → 🔥</span>
-            <b>Best beginner combo</b>
-            <small>Slow enemies first, then hit grouped waves with splash and burn.</small>
-          </div>
+      <section id="menu" class="panel screen active simple-menu">
+        <div class="menu-strip">
+          <span class="menu-chip">🗺️ 5 Maps</span>
+          <span class="menu-chip">🥕 Veggie Waves</span>
+          <span class="menu-chip">📱 PWA</span>
         </div>
         <div id="mapGrid" class="map-grid"></div>
       </section>
@@ -55,10 +50,10 @@
             <div class="stat-pill"><span>Score</span><b id="scoreText">0</b></div>
           </div>
           <div class="actions">
-            <button id="startWaveBtn" class="primary-action">Start Wave</button>
-            <button id="speedBtn" class="ghost">Speed x1</button>
-            <button id="pauseBtn" class="ghost">Pause</button>
-            <button id="backBtn" class="ghost">Maps</button>
+            <button id="startWaveBtn" class="primary-action">▶ Wave</button>
+            <button id="speedBtn" class="ghost">⏩ x1</button>
+            <button id="pauseBtn" class="ghost">⏸</button>
+            <button id="backBtn" class="ghost">🗺</button>
           </div>
         </div>
 
@@ -66,18 +61,18 @@
           <div class="board-wrap panel">
             <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
             <div id="toast" class="toast hidden"></div>
-            <div class="board-help">Tap green pads to build · Tap towers to upgrade/sell</div>
+            <div class="board-help">Tap a green pad to build · tap a tower for upgrades</div>
           </div>
 
           <aside class="side-panel panel">
             <div class="side-header">
               <span class="eyebrow">Tower Forge</span>
-              <b>Current Selection</b>
+              <b>Selection</b>
             </div>
             <div id="infoPanel" class="info-panel empty-state">
               <div class="empty-orb">＋</div>
               <b>No tower selected</b>
-              <span>Tap a tower to see range, stats, upgrade cost, and sell value.</span>
+              <span>Tap a tower to see stats, range, upgrade cost, and sell value.</span>
             </div>
           </aside>
         </div>
