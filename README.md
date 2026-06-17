@@ -1,56 +1,51 @@
-# Siege Forge PWA — Phase 1.5 Beautified UI
+# Siege Forge PWA — Phase 1.9 Ultra Veggie UI
 
-This build is a stronger visible UI upgrade of the Phase 1 tower-defense PWA.
+A mobile-first tower-defense PWA that runs on GitHub Pages with no build step.
 
-## What changed in this version
+## New in this build
 
-- New glass/aurora app theme
-- New menu hero and realm/map cards
-- New game layout with board + side Tower Forge panel
-- Clearer top HUD for realm, wave, gold, lives, and score
-- Larger bottom tower picker designed for iPhone/iPad touch
-- Real tower identities for all 5 towers:
-  - Arrow 🏹
-  - Cannon 💣
-  - Frost ❄️
-  - Flame 🔥
-  - Storm ⚡
-- Custom canvas tower drawings instead of plain circles only
-- Tower range circle when a tower is selected
-- Tower level dots
-- Better enemy health bars and effects
-- Better map decoration icons
-- Updated service worker cache: `siege-forge-v1-6-beautified-ui`
+- Permanent **Tower Forge / Selection** side block removed.
+- Tower details are now a **floating hover-style menu** shown only when a tower is selected.
+- Incoming enemies are now map-themed vegetable enemies.
+- Larger maze/path visuals across maps.
+- More background decorations: animals, plants, ruins, ice, lava, temple details.
+- Simpler icon-first home page.
+- Cleaner map cards with veggie previews.
+- Updated PWA cache name so old builds are less likely to stay stuck.
 
 ## Run locally
 
-Open `index.html` directly, or upload everything to GitHub Pages.
+Open `index.html` directly, or use a simple local server:
 
-## GitHub Pages
+```bash
+python3 -m http.server 8080
+```
 
-1. Create a new GitHub repo.
-2. Upload all files from this folder, not the ZIP itself.
-3. Go to Settings → Pages.
-4. Source: Deploy from branch.
-5. Branch: `main`, folder: `/root`.
-6. Open the Pages URL on iPhone/iPad.
-7. Use Share → Add to Home Screen.
+Then open `http://localhost:8080`.
 
-## Important cache note
+## Deploy to GitHub Pages
 
-If your phone still shows the old UI, the previous PWA/service worker is cached.
+1. Upload the full folder contents to a GitHub repository.
+2. Go to **Settings → Pages**.
+3. Choose **Deploy from branch**.
+4. Select `main` and `/root`.
+5. Open the Pages URL.
 
-Try one of these:
+## iPhone/iPad cache tip
 
-- Open the GitHub Pages URL with `?v=1-6` added to the end.
-- In Safari, clear website data for your GitHub Pages site.
-- Delete the old Home Screen icon and add it again.
-- On desktop Chrome, DevTools → Application → Service Workers → Unregister, then reload.
+If an old UI appears, remove the previous Home Screen app and open the site with:
 
-## Files to customize
+```text
+?v=1-9
+```
 
-- `data/towers.js` — tower icons, costs, damage, color, role, strategy text
-- `data/maps.js` — map paths, build pads, themes
+Then add it to Home Screen again.
+
+## Main files
+
+- `index.html` — app structure
+- `src/styles.css` — UI theme and mobile layout
+- `src/main.js` — game logic and drawing
+- `data/maps.js` — map paths, pads, veggie previews
+- `data/towers.js` — tower stats and icons
 - `data/enemies.js` — enemy stats
-- `src/main.js` — gameplay and canvas drawing
-- `src/styles.css` — visual design and mobile UI

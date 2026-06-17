@@ -22,12 +22,10 @@
         <div class="brand-badge">⚒️</div>
         <div>
           <h1>Siege Forge</h1>
-          <div class="icon-row" aria-label="Tower icons and themes">
-            <span>🏹</span><span>💣</span><span>❄️</span><span>🔥</span><span>⚡</span>
-          </div>
+          <div class="icon-row"><span>🏹</span><span>💣</span><span>❄️</span><span>🔥</span><span>⚡</span></div>
         </div>
       </div>
-      <button id="installBtn" class="ghost icon-btn hidden" aria-label="Install app">⬇️</button>
+      <button id="installBtn" class="ghost hidden">⬇️</button>
     </header>
 
     <main>
@@ -43,7 +41,7 @@
       <section id="game" class="screen">
         <div class="hud panel">
           <div class="hud-left">
-            <div class="map-chip"><span>Realm</span><b id="mapName">Grass Path</b></div>
+            <div class="map-chip"><span>Realm</span><b id="mapName">Forest Trail</b></div>
             <div class="stat-pill"><span>Wave</span><b id="waveText">1</b></div>
             <div class="stat-pill gold"><span>Gold</span><b id="goldText">180</b></div>
             <div class="stat-pill lives"><span>Lives</span><b id="livesText">20</b></div>
@@ -61,20 +59,9 @@
           <div class="board-wrap panel">
             <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
             <div id="toast" class="toast hidden"></div>
-            <div class="board-help">Tap a green pad to build · tap a tower for upgrades</div>
+            <div id="infoPanel" class="tower-popover hidden"></div>
+            <div class="board-help">Tap green pads · tap towers for the floating forge menu</div>
           </div>
-
-          <aside class="side-panel panel">
-            <div class="side-header">
-              <span class="eyebrow">Tower Forge</span>
-              <b>Selection</b>
-            </div>
-            <div id="infoPanel" class="info-panel empty-state">
-              <div class="empty-orb">＋</div>
-              <b>No tower selected</b>
-              <span>Tap a tower to see stats, range, upgrade cost, and sell value.</span>
-            </div>
-          </aside>
         </div>
 
         <div id="buildPanel" class="build-panel panel hidden"></div>
