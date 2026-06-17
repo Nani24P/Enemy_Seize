@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#111827" />
+  <meta name="theme-color" content="#0b1020" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Siege Forge" />
@@ -13,25 +13,33 @@
   <link rel="stylesheet" href="src/styles.css" />
 </head>
 <body>
+  <div class="aurora aurora-one"></div>
+  <div class="aurora aurora-two"></div>
+
   <div id="app">
-    <header class="topbar">
-      <div>
-        <h1>Siege Forge</h1>
-        <p id="subtitle">Phase 1.5 · polished tower defense PWA</p>
+    <header class="topbar glass">
+      <div class="brand-lockup">
+        <div class="brand-badge">⚒️</div>
+        <div>
+          <h1>Siege Forge</h1>
+          <p id="subtitle">Phase 1.5 UI · touch-first tower defense PWA</p>
+        </div>
       </div>
-      <button id="installBtn" class="ghost hidden">Install</button>
+      <button id="installBtn" class="ghost hidden">Install App</button>
     </header>
 
     <main>
       <section id="menu" class="panel screen active">
-        <div class="menu-head">
+        <div class="menu-hero">
           <div>
-            <h2>Choose a Realm</h2>
-            <p class="muted">Tap a map, place towers on green pads, and build one strong kill zone.</p>
+            <p class="eyebrow">Five handcrafted realms</p>
+            <h2>Build a kill zone. Hold the path.</h2>
+            <p class="muted">Tap a map, tap a glowing build pad, then choose Arrow, Cannon, Frost, Flame, or Storm towers.</p>
           </div>
-          <div class="legend-card">
-            <b>Tip</b>
-            <span>Frost before Cannon/Flame is the safest combo.</span>
+          <div class="combo-card">
+            <span class="combo-icons">❄️ → 💣 → 🔥</span>
+            <b>Best beginner combo</b>
+            <small>Slow enemies first, then hit grouped waves with splash and burn.</small>
           </div>
         </div>
         <div id="mapGrid" class="map-grid"></div>
@@ -39,25 +47,41 @@
 
       <section id="game" class="screen">
         <div class="hud panel">
-          <div class="stat-pill map-pill"><span>Map</span><b id="mapName">Grass Path</b></div>
-          <div class="stat-pill"><span>Wave</span><b id="waveText">1</b></div>
-          <div class="stat-pill gold"><span>Gold</span><b id="goldText">150</b></div>
-          <div class="stat-pill lives"><span>Lives</span><b id="livesText">20</b></div>
-          <div class="stat-pill"><span>Score</span><b id="scoreText">0</b></div>
+          <div class="hud-left">
+            <div class="map-chip"><span>Realm</span><b id="mapName">Grass Path</b></div>
+            <div class="stat-pill"><span>Wave</span><b id="waveText">1</b></div>
+            <div class="stat-pill gold"><span>Gold</span><b id="goldText">180</b></div>
+            <div class="stat-pill lives"><span>Lives</span><b id="livesText">20</b></div>
+            <div class="stat-pill"><span>Score</span><b id="scoreText">0</b></div>
+          </div>
           <div class="actions">
-            <button id="startWaveBtn">Start Wave</button>
+            <button id="startWaveBtn" class="primary-action">Start Wave</button>
             <button id="speedBtn" class="ghost">Speed x1</button>
             <button id="pauseBtn" class="ghost">Pause</button>
             <button id="backBtn" class="ghost">Maps</button>
           </div>
         </div>
 
-        <div class="board-wrap">
-          <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
-          <div id="toast" class="toast hidden"></div>
+        <div class="game-layout">
+          <div class="board-wrap panel">
+            <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
+            <div id="toast" class="toast hidden"></div>
+            <div class="board-help">Tap green pads to build · Tap towers to upgrade/sell</div>
+          </div>
+
+          <aside class="side-panel panel">
+            <div class="side-header">
+              <span class="eyebrow">Tower Forge</span>
+              <b>Current Selection</b>
+            </div>
+            <div id="infoPanel" class="info-panel empty-state">
+              <div class="empty-orb">＋</div>
+              <b>No tower selected</b>
+              <span>Tap a tower to see range, stats, upgrade cost, and sell value.</span>
+            </div>
+          </aside>
         </div>
 
-        <div id="infoPanel" class="info-panel panel hidden"></div>
         <div id="buildPanel" class="build-panel panel hidden"></div>
       </section>
     </main>

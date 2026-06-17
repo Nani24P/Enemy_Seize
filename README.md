@@ -1,72 +1,56 @@
-# Siege Forge PWA
+# Siege Forge PWA — Phase 1.5 Beautified UI
 
-A mobile-first 5-map tower defense game prototype designed for GitHub Pages and iPhone/iPad PWA install.
+This build is a stronger visible UI upgrade of the Phase 1 tower-defense PWA.
 
-## What is included
+## What changed in this version
 
-- 5 handcrafted maps: Grass Path, Desert Split, Ice Loop, Lava Cross, Temple Maze
-- 5 towers: Arrow, Cannon, Frost, Flame, Storm
-- 5 enemy types: Goblin, Runner, Brute, Shield, Boss
-- Gold, lives, waves, upgrades, selling, score saving
-- Offline-capable service worker
-- Installable PWA manifest
-- No build tools required
+- New glass/aurora app theme
+- New menu hero and realm/map cards
+- New game layout with board + side Tower Forge panel
+- Clearer top HUD for realm, wave, gold, lives, and score
+- Larger bottom tower picker designed for iPhone/iPad touch
+- Real tower identities for all 5 towers:
+  - Arrow 🏹
+  - Cannon 💣
+  - Frost ❄️
+  - Flame 🔥
+  - Storm ⚡
+- Custom canvas tower drawings instead of plain circles only
+- Tower range circle when a tower is selected
+- Tower level dots
+- Better enemy health bars and effects
+- Better map decoration icons
+- Updated service worker cache: `siege-forge-v1-6-beautified-ui`
 
 ## Run locally
 
-Open `index.html` in a browser, or use a small local server:
+Open `index.html` directly, or upload everything to GitHub Pages.
 
-```bash
-python3 -m http.server 8080
-```
+## GitHub Pages
 
-Then open:
+1. Create a new GitHub repo.
+2. Upload all files from this folder, not the ZIP itself.
+3. Go to Settings → Pages.
+4. Source: Deploy from branch.
+5. Branch: `main`, folder: `/root`.
+6. Open the Pages URL on iPhone/iPad.
+7. Use Share → Add to Home Screen.
 
-```text
-http://localhost:8080
-```
+## Important cache note
 
-## Deploy to GitHub Pages from iPad/iPhone
+If your phone still shows the old UI, the previous PWA/service worker is cached.
 
-1. Create a new GitHub repository, for example `siege-forge-pwa`.
-2. Upload all files from this folder to the repository root.
-3. Go to repository Settings → Pages.
-4. Set Source to `Deploy from a branch`.
-5. Select branch `main` and folder `/root`.
-6. Open the GitHub Pages URL on iPhone/iPad.
-7. Tap Share → Add to Home Screen.
+Try one of these:
 
-## Edit maps
+- Open the GitHub Pages URL with `?v=1-6` added to the end.
+- In Safari, clear website data for your GitHub Pages site.
+- Delete the old Home Screen icon and add it again.
+- On desktop Chrome, DevTools → Application → Service Workers → Unregister, then reload.
 
-Open `data/maps.js`. Each map has:
+## Files to customize
 
-- `path`: enemy path points
-- `secondPath`: optional second path
-- `pads`: tower build positions
-- `wavesToWin`: campaign clear wave
-- `theme`: map colors
-
-## Edit tower balance
-
-Open `data/towers.js` and adjust cost, damage, range, fire rate, splash, slow, burn, or chain values.
-
-## Edit enemies
-
-Open `data/enemies.js` and adjust HP, speed, reward, color, and armor.
-
-## Phase 1.5 UI polish added
-
-This build upgrades the Phase 1 interface before Phase 2 gameplay progression:
-
-- New compact HUD with map, wave, gold, lives, score, pause, speed, and map buttons
-- Better tower picker with icons, cost, tower role, and short strategy note
-- Selected tower details panel with damage, range, fire rate, upgrade cost, and sell value
-- Range circle only for the selected tower, so the board is cleaner
-- Tower level dots and improved tower identity colors
-- Enemy health bars, shield marker, boss marker, slow/burn glow effects
-- Projectile, cannon splash, build, upgrade, leak, and kill feedback effects
-- Mobile-first bottom tower picker and larger tap targets
-
-## Best Phase 1.5 tower combo
-
-Use Frost before your main damage zone, then add Cannon or Flame near bends. Arrow is cheap cleanup, and Storm is best later when enemies come in groups.
+- `data/towers.js` — tower icons, costs, damage, color, role, strategy text
+- `data/maps.js` — map paths, build pads, themes
+- `data/enemies.js` — enemy stats
+- `src/main.js` — gameplay and canvas drawing
+- `src/styles.css` — visual design and mobile UI

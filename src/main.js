@@ -5,15 +5,13 @@ import { ENEMIES } from '../data/enemies.js';
 if (!CanvasRenderingContext2D.prototype.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
     this.beginPath();
-    this.moveTo(x + r, y);
-    this.lineTo(x + w - r, y);
+    this.moveTo(x + r, y); this.lineTo(x + w - r, y);
     this.quadraticCurveTo(x + w, y, x + w, y + r);
     this.lineTo(x + w, y + h - r);
     this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
     this.lineTo(x + r, y + h);
     this.quadraticCurveTo(x, y + h, x, y + h - r);
-    this.lineTo(x, y + r);
-    this.quadraticCurveTo(x, y, x + r, y);
+    this.lineTo(x, y + r); this.quadraticCurveTo(x, y, x + r, y);
     this.closePath();
     return this;
   };
@@ -41,41 +39,37 @@ const ui = {
   scoreText: document.getElementById('scoreText')
 };
 
+const mapIcons = { grass: '🌿', desert: '🏜️', ice: '🧊', lava: '🌋', temple: '🏛️' };
+const saveKey = 'siege-forge-save-v1-6-ui';
 let state;
 let selectedPad = null;
 let selectedTower = null;
 let lastTime = 0;
 let deferredInstallPrompt = null;
 let toastTimer = null;
-const saveKey = 'siege-forge-save-v1';
 
 function loadSave() {
   try { return JSON.parse(localStorage.getItem(saveKey)) || { best: {} }; }
   catch { return { best: {} }; }
 }
-
 function saveGame() {
   if (!state) return;
   const save = loadSave();
   if (!save.best[state.map.id] || state.score > save.best[state.map.id]) save.best[state.map.id] = state.score;
   localStorage.setItem(saveKey, JSON.stringify(save));
 }
-
 function showToast(text) {
   toast.textContent = text;
   toast.classList.remove('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.add('hidden'), 1300);
+  toastTimer = setTimeout(() => toast.classList.add('hidden'), 1450);
 }
-
 function showMenu() {
   menu.classList.add('active');
   gameScreen.classList.remove('active');
   buildPanel.classList.add('hidden');
-  infoPanel.classList.add('hidden');
   renderMapCards();
 }
-
 function showGame() {
   menu.classList.remove('active');
   gameScreen.classList.add('active');
@@ -87,9 +81,11 @@ function renderMapCards() {
   MAPS.forEach((map, index) => {
     const card = document.createElement('article');
     card.className = 'map-card';
-    card.style.background = `linear-gradient(150deg, ${map.theme[1]}66, rgba(255,255,255,.04))`;
+    card.style.setProperty('--map-accent', map.theme[2]);
+    card.style.background = `linear-gradient(150deg, ${map.theme[1]}88, rgba(255,255,255,.045))`;
     card.innerHTML = `
       <div>
+        <span class="realm-icon">${mapIcons[map.id] || '🛡️'}</span>
         <h3>${index + 1}. ${map.name}</h3>
         <small>${map.description}</small>
       </div>
@@ -122,12 +118,12 @@ function startMap(map) {
   };
   selectedPad = null;
   selectedTower = null;
-  ui.mapName.textContent = map.name;
+  ui.mapName.textContent = `${mapIcons[map.id] || '🛡️'} ${map.name}`;
   showGame();
   updateUI();
   renderInfoPanel();
   draw(0);
-  showToast('Tap a green pad to build');
+  showToast('Tap a glowing green pad to build');
 }
 
 function updateUI() {
@@ -156,7 +152,6 @@ function makeWave(wave) {
   if (wave % 5 === 0) list.push('boss');
   return list;
 }
-
 function startWave() {
   if (state.waveActive || state.gameOver) return;
   state.spawnQueue = makeWave(state.wave).map((type, index) => ({ type, delay: index * 0.48 }));
@@ -164,11 +159,9 @@ function startWave() {
   state.waveActive = true;
   buildPanel.classList.add('hidden');
   selectedPad = null;
-  if (state.wave % 5 === 0) showToast('Boss wave incoming');
-  else showToast(`Wave ${state.wave} started`);
+  showToast(state.wave % 5 === 0 ? '⚠️ Boss wave incoming' : `Wave ${state.wave} started`);
   updateUI();
 }
-
 function spawnEnemy(type) {
   const def = ENEMIES[type];
   const scale = 1 + (state.wave - 1) * 0.16 + (state.map.id === 'lava' ? 0.08 : 0);
@@ -181,27 +174,19 @@ function spawnEnemy(type) {
     maxHp: Math.floor(def.hp * scale),
     hp: Math.floor(def.hp * scale),
     speed: def.speed * (state.map.id === 'lava' ? 1.12 : 1),
-    x, y,
-    path,
-    pathIndex: 1,
-    slowUntil: 0,
-    slowFactor: 1,
-    burnUntil: 0,
-    burnDps: 0,
+    x, y, path, pathIndex: 1,
+    slowUntil: 0, slowFactor: 1,
+    burnUntil: 0, burnDps: 0,
     reached: false
   });
 }
-
 function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
 function update(dt, now) {
   if (!state || state.paused || state.gameOver) return;
   dt *= state.speed;
-
   state.spawnTimer += dt;
-  while (state.spawnQueue.length && state.spawnTimer >= state.spawnQueue[0].delay) {
-    spawnEnemy(state.spawnQueue.shift().type);
-  }
+  while (state.spawnQueue.length && state.spawnTimer >= state.spawnQueue[0].delay) spawnEnemy(state.spawnQueue.shift().type);
 
   for (const enemy of state.enemies) {
     if (enemy.burnUntil > now) enemy.hp -= enemy.burnDps * dt;
@@ -217,10 +202,7 @@ function update(dt, now) {
     const dy = target[1] - enemy.y;
     const d = Math.hypot(dx, dy);
     if (d < 4) enemy.pathIndex += 1;
-    else {
-      enemy.x += (dx / d) * speed * dt;
-      enemy.y += (dy / d) * speed * dt;
-    }
+    else { enemy.x += (dx / d) * speed * dt; enemy.y += (dy / d) * speed * dt; }
   }
 
   for (const tower of state.towers) {
@@ -232,14 +214,14 @@ function update(dt, now) {
     if (!target) continue;
     fireTower(tower, target, now);
     tower.cooldown = tower.fireRate / tower.level;
-    tower.flash = 0.12;
+    tower.flash = 0.16;
   }
 
   for (const tower of state.towers) tower.flash = Math.max(0, (tower.flash || 0) - dt);
   for (const p of state.projectiles) {
     p.life -= dt;
-    p.x += (p.tx - p.x) * Math.min(1, dt * 12);
-    p.y += (p.ty - p.y) * Math.min(1, dt * 12);
+    p.x += (p.tx - p.x) * Math.min(1, dt * 13);
+    p.y += (p.ty - p.y) * Math.min(1, dt * 13);
   }
   state.projectiles = state.projectiles.filter(p => p.life > 0);
   state.effects = state.effects.filter(fx => (fx.life -= dt) > 0);
@@ -249,18 +231,12 @@ function update(dt, now) {
   for (const enemy of killed) {
     state.gold += enemy.reward;
     state.score += enemy.reward + state.wave * 2;
-    state.floating.push({ x: enemy.x, y: enemy.y, text: `+${enemy.reward}`, color: '#facc15', life: 0.8, max: 0.8 });
+    state.floating.push({ x: enemy.x, y: enemy.y, text: `+${enemy.reward}`, color: '#facc15', life: 0.85, max: 0.85 });
     state.effects.push({ type: 'pop', x: enemy.x, y: enemy.y, color: enemy.color, life: 0.35, max: 0.35 });
   }
   state.enemies = state.enemies.filter(e => e.hp > 0 && !e.reached);
 
-  if (state.lives <= 0) {
-    state.gameOver = true;
-    state.lives = 0;
-    saveGame();
-    showToast('Game over');
-  }
-
+  if (state.lives <= 0) { state.gameOver = true; state.lives = 0; saveGame(); showToast('Game over'); }
   if (state.waveActive && state.spawnQueue.length === 0 && state.enemies.length === 0) {
     state.waveActive = false;
     state.gold += 35 + state.wave * 5;
@@ -277,112 +253,139 @@ function fireTower(tower, target, now) {
   const def = TOWERS[tower.kind];
   const damage = def.damage * tower.level;
   applyDamage(target, damage, tower.kind);
-  state.projectiles.push({ x: tower.x, y: tower.y, tx: target.x, ty: target.y, color: def.color, life: 0.22, kind: tower.kind });
-
+  state.projectiles.push({ x: tower.x, y: tower.y, tx: target.x, ty: target.y, color: def.color, life: 0.23, kind: tower.kind });
   if (def.splash) {
-    state.effects.push({ type: 'ring', x: target.x, y: target.y, color: def.color, life: 0.28, max: 0.28, radius: def.splash });
-    for (const e of state.enemies) {
-      if (e !== target && dist(e, target) <= def.splash) applyDamage(e, damage * 0.55, tower.kind);
-    }
+    state.effects.push({ type: 'ring', x: target.x, y: target.y, color: def.color, life: 0.30, max: 0.30, radius: def.splash });
+    for (const e of state.enemies) if (e !== target && dist(e, target) <= def.splash) applyDamage(e, damage * 0.55, tower.kind);
   }
   if (def.slow) {
     target.slowFactor = def.slow;
     target.slowUntil = now + def.slowTime;
-    state.effects.push({ type: 'ring', x: target.x, y: target.y, color: def.color, life: 0.22, max: 0.22, radius: 26 });
+    state.effects.push({ type: 'ring', x: target.x, y: target.y, color: def.color, life: 0.22, max: 0.22, radius: 30 });
   }
-  if (def.burn) {
-    target.burnDps = def.burn * tower.level;
-    target.burnUntil = now + def.burnTime;
-  }
+  if (def.burn) { target.burnDps = def.burn * tower.level; target.burnUntil = now + def.burnTime; }
   if (def.chain) {
-    const chained = state.enemies
-      .filter(e => e !== target && e.hp > 0 && dist(e, target) <= 120)
-      .slice(0, def.chain + tower.level - 1);
-    chained.forEach(e => {
+    state.enemies.filter(e => e !== target && e.hp > 0 && dist(e, target) <= 120).slice(0, def.chain + tower.level - 1).forEach(e => {
       applyDamage(e, damage * 0.65, tower.kind);
       state.projectiles.push({ x: target.x, y: target.y, tx: e.x, ty: e.y, color: def.color, life: 0.18, kind: 'storm' });
     });
   }
 }
-
 function applyDamage(enemy, amount, kind) {
   let final = amount;
   if (enemy.armor && kind === 'arrow') final *= enemy.armor;
   enemy.hp -= final;
 }
 
+function drawMapDecoration(map) {
+  const decorative = {
+    grass: [['🌳',72,74],['🌲',896,430],['🌿',790,72],['🍄',430,505]],
+    desert: [['🌵',88,84],['☀️',874,62],['🪨',510,84],['🌵',720,466]],
+    ice: [['❄️',86,88],['🧊',822,96],['❅',490,492],['❄️',720,420]],
+    lava: [['🌋',90,78],['🔥',805,88],['🪨',355,478],['🔥',878,420]],
+    temple: [['🏛️',80,42],['🔮',855,150],['✦',520,148],['🏺',120,470]]
+  }[map.id] || [];
+  ctx.globalAlpha = .34;
+  ctx.font = '30px system-ui';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const [icon, x, y] of decorative) ctx.fillText(icon, x, y);
+  ctx.globalAlpha = 1;
+}
+
 function drawGridPath(path, color) {
-  ctx.lineWidth = 50;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(15, 23, 42, 0.78)';
-  ctx.beginPath();
-  path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-  ctx.stroke();
-  ctx.lineWidth = 31;
-  ctx.strokeStyle = color;
-  ctx.beginPath();
-  path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-  ctx.stroke();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.lineWidth = 58;
+  ctx.strokeStyle = 'rgba(2, 6, 23, 0.56)';
+  ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+  ctx.lineWidth = 42;
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, 'rgba(15,23,42,.92)');
+  ctx.strokeStyle = grad;
+  ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.setLineDash([12, 16]);
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawTowerBody(tower, def, size, isSelected) {
+  ctx.save();
+  ctx.translate(tower.x, tower.y);
+  ctx.shadowColor = def.color;
+  ctx.shadowBlur = isSelected ? 24 : (tower.level >= 3 ? 15 : 6);
+  const bodyGrad = ctx.createRadialGradient(-8, -10, 4, 0, 0, size + 8);
+  bodyGrad.addColorStop(0, def.glow || def.color);
+  bodyGrad.addColorStop(.48, def.color);
+  bodyGrad.addColorStop(1, def.dark);
+  ctx.fillStyle = bodyGrad;
+  ctx.strokeStyle = 'rgba(2,6,23,.86)';
+  ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(2,6,23,.72)';
+  ctx.beginPath(); ctx.arc(0, 0, size * .58, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
   ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(255,255,255,.16)';
-  ctx.beginPath();
-  path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-  ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, size + 4, -1.2, 1.5); ctx.stroke();
+
+  if (tower.kind === 'arrow') {
+    ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-12, 8); ctx.quadraticCurveTo(0, -18, 12, 8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1, -14); ctx.lineTo(-1, 15); ctx.stroke();
+    ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.moveTo(-1,-18); ctx.lineTo(-7,-8); ctx.lineTo(5,-8); ctx.closePath(); ctx.fill();
+  } else if (tower.kind === 'cannon') {
+    ctx.fillStyle = '#111827'; ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(-9, -24, 18, 34, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.arc(0, 11, 7, 0, Math.PI * 2); ctx.fill();
+  } else if (tower.kind === 'frost') {
+    ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (let i = 0; i < 6; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -18); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,-11); ctx.lineTo(-6,-16); ctx.moveTo(0,-11); ctx.lineTo(6,-16); ctx.stroke(); }
+  } else if (tower.kind === 'flame') {
+    ctx.fillStyle = '#fef3c7'; ctx.beginPath(); ctx.moveTo(0,-20); ctx.bezierCurveTo(18,-2,8,15,0,18); ctx.bezierCurveTo(-12,10,-18,-4,0,-20); ctx.fill();
+    ctx.fillStyle = '#fb7185'; ctx.beginPath(); ctx.moveTo(2,-10); ctx.bezierCurveTo(10,3,6,12,0,14); ctx.bezierCurveTo(-7,8,-8,0,2,-10); ctx.fill();
+  } else if (tower.kind === 'storm') {
+    ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.moveTo(4,-22); ctx.lineTo(-10,2); ctx.lineTo(2,2); ctx.lineTo(-4,22); ctx.lineTo(14,-6); ctx.lineTo(2,-6); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
 }
 
 function drawTower(tower, now) {
   const def = TOWERS[tower.kind];
   const isSelected = selectedTower === tower;
   if (isSelected) {
-    ctx.fillStyle = `${def.color}22`;
-    ctx.strokeStyle = `${def.color}aa`;
-    ctx.lineWidth = 2;
+    ctx.fillStyle = `${def.color}20`;
+    ctx.strokeStyle = `${def.color}d0`;
+    ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
-
-  const pulse = tower.flash ? tower.flash * 25 : 0;
-  const size = 21 + tower.level * 3 + pulse;
-  ctx.shadowColor = def.color;
-  ctx.shadowBlur = isSelected ? 16 : (tower.level === 3 ? 10 : 0);
-  ctx.fillStyle = def.color;
-  ctx.strokeStyle = def.dark || '#020617';
-  ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.arc(tower.x, tower.y, size, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  ctx.fillStyle = 'rgba(2,6,23,.92)';
-  ctx.beginPath(); ctx.arc(tower.x, tower.y, 14, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#f8fafc';
-  ctx.font = 'bold 20px system-ui';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(def.icon, tower.x, tower.y + 1);
-
-  for (let i = 0; i < tower.level; i++) {
-    ctx.fillStyle = '#facc15';
-    ctx.beginPath(); ctx.arc(tower.x - 11 + i * 11, tower.y + size + 8, 3.2, 0, Math.PI * 2); ctx.fill();
+  const pulse = tower.flash ? tower.flash * 28 : 0;
+  const size = 23 + tower.level * 3 + pulse;
+  drawTowerBody(tower, def, size, isSelected);
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = i < tower.level ? '#facc15' : 'rgba(255,255,255,.20)';
+    ctx.beginPath(); ctx.arc(tower.x - 12 + i * 12, tower.y + size + 10, 3.5, 0, Math.PI * 2); ctx.fill();
   }
 }
 
 function draw(now) {
   if (!state) return;
-  const [bg, pathColor] = state.map.theme;
+  const [bg, pathColor, accent] = state.map.theme;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
   gradient.addColorStop(0, bg);
+  gradient.addColorStop(.56, '#0f172a');
   gradient.addColorStop(1, '#020617');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  for (let x = 0; x < canvas.width; x += 60) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.035)';
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-  }
-  for (let y = 0; y < canvas.height; y += 60) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.035)';
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-  }
+  ctx.globalAlpha = .55;
+  for (let x = 0; x < canvas.width; x += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+  for (let y = 0; y < canvas.height; y += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  drawMapDecoration(state.map);
 
   drawGridPath(state.map.path, pathColor);
   if (state.map.secondPath) drawGridPath(state.map.secondPath, pathColor);
@@ -390,15 +393,15 @@ function draw(now) {
   for (const [x, y] of state.map.pads) {
     const occupied = state.towers.some(t => Math.hypot(t.x - x, t.y - y) < 10);
     const isSelected = selectedPad && selectedPad[0] === x && selectedPad[1] === y;
+    ctx.shadowColor = occupied ? 'transparent' : '#86efac';
+    ctx.shadowBlur = occupied ? 0 : 12;
     ctx.fillStyle = occupied ? 'rgba(255,255,255,.10)' : 'rgba(34,197,94,.32)';
-    ctx.strokeStyle = isSelected ? '#facc15' : (occupied ? 'rgba(255,255,255,.24)' : 'rgba(187,247,208,.70)');
+    ctx.strokeStyle = isSelected ? '#facc15' : (occupied ? 'rgba(255,255,255,.26)' : 'rgba(187,247,208,.86)');
     ctx.lineWidth = isSelected ? 4 : 2.5;
-    ctx.beginPath(); ctx.roundRect(x - 25, y - 25, 50, 50, 14); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(x - 27, y - 27, 54, 54, 16); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
     if (!occupied) {
-      ctx.fillStyle = 'rgba(255,255,255,.35)';
-      ctx.font = 'bold 20px system-ui';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('+', x, y + 1);
+      ctx.fillStyle = 'rgba(248,250,252,.78)'; ctx.font = 'bold 24px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+', x, y + 1);
     }
   }
 
@@ -407,68 +410,50 @@ function draw(now) {
   for (const enemy of state.enemies) {
     const slowed = enemy.slowUntil > now;
     const burning = enemy.burnUntil > now;
-    ctx.shadowColor = burning ? '#fb7185' : (slowed ? '#67e8f9' : 'transparent');
-    ctx.shadowBlur = burning || slowed ? 10 : 0;
-    ctx.fillStyle = enemy.color;
-    ctx.strokeStyle = slowed ? '#67e8f9' : '#020617';
-    ctx.lineWidth = 4;
+    ctx.shadowColor = burning ? '#fb7185' : (slowed ? '#67e8f9' : 'rgba(0,0,0,.35)');
+    ctx.shadowBlur = burning || slowed ? 13 : 5;
+    const enemyGrad = ctx.createRadialGradient(enemy.x - 5, enemy.y - 6, 2, enemy.x, enemy.y, enemy.radius + 7);
+    enemyGrad.addColorStop(0, '#f8fafc'); enemyGrad.addColorStop(.26, enemy.color); enemyGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = enemyGrad;
+    ctx.strokeStyle = slowed ? '#67e8f9' : '#020617'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
-
-    if (enemy.type === 'shield') {
-      ctx.strokeStyle = 'rgba(248,250,252,.85)';
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5, -0.8, 0.8); ctx.stroke();
-    }
-    if (enemy.type === 'boss') {
-      ctx.fillStyle = '#020617';
-      ctx.font = 'bold 15px system-ui';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('B', enemy.x, enemy.y + 1);
-    }
-
-    const hpw = enemy.type === 'boss' ? 64 : 44;
+    if (enemy.type === 'shield') { ctx.strokeStyle = 'rgba(248,250,252,.92)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 6, -0.9, 0.95); ctx.stroke(); }
+    if (enemy.type === 'boss') { ctx.fillStyle = '#020617'; ctx.font = 'bold 15px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('B', enemy.x, enemy.y + 1); }
+    const hpw = enemy.type === 'boss' ? 68 : 46;
     const hpPct = Math.max(0, enemy.hp / enemy.maxHp);
-    ctx.fillStyle = 'rgba(15,23,42,.92)'; ctx.fillRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 16, hpw, 7);
-    ctx.fillStyle = hpPct > .45 ? '#22c55e' : (hpPct > .2 ? '#facc15' : '#ef4444');
-    ctx.fillRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 16, hpw * hpPct, 7);
+    ctx.fillStyle = 'rgba(15,23,42,.96)'; ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 18, hpw, 8, 4); ctx.fill();
+    ctx.fillStyle = hpPct > .45 ? '#22c55e' : (hpPct > .2 ? '#facc15' : '#ef4444'); ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 18, hpw * hpPct, 8, 4); ctx.fill();
   }
 
   for (const p of state.projectiles) {
     ctx.strokeStyle = p.color;
-    ctx.lineWidth = p.kind === 'storm' ? 3 : 4;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 8;
+    ctx.lineWidth = p.kind === 'storm' ? 4 : (p.kind === 'arrow' ? 3 : 5);
+    ctx.lineCap = 'round'; ctx.shadowColor = p.color; ctx.shadowBlur = 11;
     ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.tx, p.ty); ctx.stroke();
+    if (p.kind === 'cannon') { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.tx, p.ty, 5, 0, Math.PI * 2); ctx.fill(); }
     ctx.shadowBlur = 0;
   }
 
   for (const fx of state.effects) {
     const pct = Math.max(0, fx.life / fx.max);
     ctx.globalAlpha = pct;
-    ctx.strokeStyle = fx.color;
-    ctx.lineWidth = 4;
-    if (fx.type === 'ring' || fx.type === 'pop' || fx.type === 'leak') {
-      const r = (fx.radius || 34) * (1.2 - pct);
-      ctx.beginPath(); ctx.arc(fx.x, fx.y, r, 0, Math.PI * 2); ctx.stroke();
-    }
+    ctx.strokeStyle = fx.color; ctx.lineWidth = 4;
+    const r = (fx.radius || 34) * (1.25 - pct);
+    ctx.beginPath(); ctx.arc(fx.x, fx.y, r, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
-
   for (const f of state.floating) {
     const pct = Math.max(0, f.life / f.max);
-    ctx.globalAlpha = pct;
-    ctx.fillStyle = f.color || '#facc15'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(f.text, f.x, f.y - (1 - pct) * 42);
+    ctx.globalAlpha = pct; ctx.fillStyle = f.color || '#facc15'; ctx.font = 'bold 21px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(f.text, f.x, f.y - (1 - pct) * 44);
     ctx.globalAlpha = 1;
   }
 
   if (state.paused) {
-    ctx.fillStyle = 'rgba(2,6,23,.52)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.font = 'bold 44px system-ui';
-    ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = 'rgba(2,6,23,.54)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.font = 'bold 44px system-ui'; ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
   }
-
   if (state.gameOver || state.won) {
     ctx.fillStyle = 'rgba(2,6,23,.72)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.font = 'bold 48px system-ui';
@@ -486,184 +471,126 @@ function loop(time) {
   draw(now);
   requestAnimationFrame(loop);
 }
-
 function canvasPoint(event) {
   const rect = canvas.getBoundingClientRect();
   const touch = event.touches?.[0] || event.changedTouches?.[0] || event;
-  return {
-    x: (touch.clientX - rect.left) * (canvas.width / rect.width),
-    y: (touch.clientY - rect.top) * (canvas.height / rect.height)
-  };
+  return { x: (touch.clientX - rect.left) * (canvas.width / rect.width), y: (touch.clientY - rect.top) * (canvas.height / rect.height) };
 }
+function formatFireRate(rate, level = 1) { return `${(1 / (rate / level)).toFixed(1)}/s`; }
 
-function formatFireRate(rate, level = 1) {
-  return `${(1 / (rate / level)).toFixed(1)}/s`;
+function renderEmptyInfoPanel() {
+  infoPanel.className = 'info-panel empty-state';
+  infoPanel.innerHTML = `<div class="empty-orb">＋</div><b>No tower selected</b><span>Tap a tower to see range, stats, upgrade cost, and sell value.</span>`;
 }
-
 function renderInfoPanel() {
-  if (!state || !selectedTower) {
-    infoPanel.classList.add('hidden');
-    return;
-  }
+  if (!state || !selectedTower) return renderEmptyInfoPanel();
   const tower = selectedTower;
   const def = TOWERS[tower.kind];
   const upgradeCost = 60 * tower.level + def.cost;
   const sellValue = Math.floor(def.cost * 0.55 * tower.level);
   const maxed = tower.level >= 3;
+  const dots = [1,2,3].map(n => `<i class="${n <= tower.level ? 'on' : ''}"></i>`).join('');
+  infoPanel.className = 'info-panel';
   infoPanel.innerHTML = `
-    <div class="info-title">
-      <div class="tower-icon" style="background:${def.dark}; color:${def.color};">${def.icon}</div>
-      <div>
-        <h3>${def.name} Tower · Level ${tower.level}</h3>
-        <p>${def.role} · ${def.note}</p>
+    <div class="info-card" style="--tower-color:${def.color}; --tower-dark:${def.dark};">
+      <div class="info-title">
+        <div class="tower-icon" style="background:${def.dark}; color:${def.color};">${def.icon}</div>
+        <div>
+          <h3>${def.name} Tower</h3>
+          <p>${def.role}<br>${def.note}</p>
+          <div class="level-dots">${dots}</div>
+        </div>
       </div>
-    </div>
-    <div class="stat-grid">
-      <div class="mini-stat"><span>Damage</span><b>${Math.round(def.damage * tower.level)}</b></div>
-      <div class="mini-stat"><span>Range</span><b>${tower.range}</b></div>
-      <div class="mini-stat"><span>Rate</span><b>${formatFireRate(tower.fireRate, tower.level)}</b></div>
-      <div class="mini-stat"><span>Upgrade</span><b>${maxed ? 'Max' : upgradeCost}</b></div>
-      <div class="mini-stat"><span>Sell</span><b>+${sellValue}</b></div>
-    </div>
-    <div class="panel-actions">
-      <button id="infoUpgrade" ${maxed || state.gold < upgradeCost ? 'disabled' : ''}>${maxed ? 'Max Level' : `Upgrade · ${upgradeCost}`}</button>
-      <button id="infoSell" class="ghost">Sell · +${sellValue}</button>
-      <button id="infoClose" class="ghost">Close</button>
-    </div>
-  `;
-  infoPanel.classList.remove('hidden');
+      <div class="stat-grid">
+        <div class="mini-stat"><span>Level</span><b>${tower.level}/3</b></div>
+        <div class="mini-stat"><span>Damage</span><b>${Math.round(def.damage * tower.level)}</b></div>
+        <div class="mini-stat"><span>Range</span><b>${tower.range}</b></div>
+        <div class="mini-stat"><span>Fire Rate</span><b>${formatFireRate(tower.fireRate, tower.level)}</b></div>
+        <div class="mini-stat"><span>Upgrade</span><b>${maxed ? 'Max' : upgradeCost + 'g'}</b></div>
+        <div class="mini-stat"><span>Sell Value</span><b>+${sellValue}g</b></div>
+      </div>
+      <div class="panel-actions">
+        <button id="infoUpgrade" ${maxed || state.gold < upgradeCost ? 'disabled' : ''}>${maxed ? 'Max Level' : `Upgrade · ${upgradeCost}g`}</button>
+        <button id="infoSell" class="ghost">Sell · +${sellValue}g</button>
+        <button id="infoClose" class="ghost wide">Close Selection</button>
+      </div>
+    </div>`;
   document.getElementById('infoUpgrade').onclick = () => upgradeTower(tower);
   document.getElementById('infoSell').onclick = () => sellTower(tower);
-  document.getElementById('infoClose').onclick = () => {
-    selectedTower = null;
-    selectedPad = null;
-    infoPanel.classList.add('hidden');
-  };
+  document.getElementById('infoClose').onclick = () => { selectedTower = null; selectedPad = null; renderInfoPanel(); };
 }
-
 function upgradeTower(tower) {
   const def = TOWERS[tower.kind];
   const upgradeCost = 60 * tower.level + def.cost;
   if (tower.level >= 3) return showToast('Tower already maxed');
   if (state.gold < upgradeCost) return showToast('Not enough gold');
-  state.gold -= upgradeCost;
-  tower.level += 1;
-  tower.range += 10;
-  tower.flash = 0.4;
-  state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: def.color, life: 0.45, max: 0.45, radius: tower.range });
-  showToast(`${def.name} upgraded to level ${tower.level}`);
-  updateUI();
+  state.gold -= upgradeCost; tower.level += 1; tower.range += 10; tower.flash = 0.45;
+  state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: def.color, life: 0.48, max: 0.48, radius: tower.range });
+  showToast(`${def.icon} ${def.name} upgraded to level ${tower.level}`); updateUI();
 }
-
 function sellTower(tower) {
   const def = TOWERS[tower.kind];
   const sellValue = Math.floor(def.cost * 0.55 * tower.level);
-  state.gold += sellValue;
-  state.towers = state.towers.filter(t => t !== tower);
-  selectedTower = null;
-  selectedPad = null;
-  buildPanel.classList.add('hidden');
-  infoPanel.classList.add('hidden');
-  showToast(`${def.name} sold`);
-  updateUI();
+  state.gold += sellValue; state.towers = state.towers.filter(t => t !== tower);
+  selectedTower = null; selectedPad = null; buildPanel.classList.add('hidden'); renderInfoPanel();
+  showToast(`${def.icon} ${def.name} sold`); updateUI();
 }
-
 function openBuildPanel(pad) {
-  selectedPad = pad;
-  selectedTower = null;
-  infoPanel.classList.add('hidden');
+  selectedPad = pad; selectedTower = null; renderInfoPanel();
   buildPanel.innerHTML = `
     <div class="build-heading">
-      <div><b>Choose Tower</b><br><span>Gold available: ${Math.floor(state.gold)}</span></div>
+      <div><b>Choose Tower</b><br><span>Gold available: ${Math.floor(state.gold)} · each tower has a clear role</span></div>
       <button id="closeBuild" class="ghost">Cancel</button>
     </div>
-    <div class="tower-grid"></div>
-  `;
+    <div class="tower-grid"></div>`;
   const grid = buildPanel.querySelector('.tower-grid');
   Object.entries(TOWERS).forEach(([kind, t]) => {
     const btn = document.createElement('button');
-    btn.className = 'tower-choice';
+    btn.className = `tower-choice ${t.accentClass || ''}`;
     btn.disabled = state.gold < t.cost;
-    btn.style.background = `linear-gradient(145deg, ${t.dark}dd, rgba(255,255,255,.06))`;
+    btn.style.setProperty('--tower-color', t.color);
+    btn.style.background = `linear-gradient(145deg, ${t.dark}f0, rgba(255,255,255,.055))`;
     btn.innerHTML = `
-      <span class="top"><span class="icon" style="color:${t.color}; background:${t.dark};">${t.icon}</span><span class="cost">${t.cost}g</span></span>
+      <span class="top"><span class="icon" style="color:${t.color};">${t.icon}</span><span class="cost">${t.cost}g</span></span>
       <b>${t.name}</b>
       <small>${t.role}<br>${t.note}</small>
-    `;
+      <span class="strategy">${t.strategy}</span>`;
     btn.onclick = () => {
       if (state.gold < t.cost) return showToast('Not enough gold');
       state.gold -= t.cost;
       const tower = { kind, x: pad[0], y: pad[1], level: 1, cooldown: 0, ...t };
-      state.towers.push(tower);
-      selectedTower = tower;
-      buildPanel.classList.add('hidden');
-      state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: t.color, life: 0.36, max: 0.36, radius: 70 });
-      showToast(`${t.name} tower built`);
-      updateUI();
+      state.towers.push(tower); selectedTower = tower; buildPanel.classList.add('hidden');
+      state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: t.color, life: 0.38, max: 0.38, radius: 76 });
+      showToast(`${t.icon} ${t.name} tower built`); updateUI();
     };
     grid.appendChild(btn);
   });
   buildPanel.classList.remove('hidden');
-  document.getElementById('closeBuild').onclick = () => {
-    buildPanel.classList.add('hidden');
-    selectedPad = null;
-  };
+  document.getElementById('closeBuild').onclick = () => { buildPanel.classList.add('hidden'); selectedPad = null; };
 }
-
-function selectExistingTower(tower) {
-  selectedTower = tower;
-  selectedPad = [tower.x, tower.y];
-  buildPanel.classList.add('hidden');
-  renderInfoPanel();
-}
+function selectExistingTower(tower) { selectedTower = tower; selectedPad = [tower.x, tower.y]; buildPanel.classList.add('hidden'); renderInfoPanel(); }
 
 canvas.addEventListener('pointerdown', event => {
   if (!state || state.gameOver) return;
   const p = canvasPoint(event);
-  const tower = state.towers.find(t => Math.hypot(p.x - t.x, p.y - t.y) <= 34);
-  if (tower) {
-    selectExistingTower(tower);
-    return;
-  }
-  const pad = state.map.pads.find(([x, y]) => Math.hypot(p.x - x, p.y - y) <= 36);
+  const tower = state.towers.find(t => Math.hypot(p.x - t.x, p.y - t.y) <= 38);
+  if (tower) return selectExistingTower(tower);
+  const pad = state.map.pads.find(([x, y]) => Math.hypot(p.x - x, p.y - y) <= 39);
   if (pad) {
     const occupied = state.towers.some(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10);
-    if (occupied) {
-      const existing = state.towers.find(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10);
-      selectExistingTower(existing);
-    } else openBuildPanel(pad);
-  } else {
-    buildPanel.classList.add('hidden');
-    selectedPad = null;
-    selectedTower = null;
-    renderInfoPanel();
-  }
+    if (occupied) selectExistingTower(state.towers.find(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10));
+    else openBuildPanel(pad);
+  } else { buildPanel.classList.add('hidden'); selectedPad = null; selectedTower = null; renderInfoPanel(); }
 });
 
 startWaveBtn.addEventListener('click', startWave);
-speedBtn.addEventListener('click', () => {
-  state.speed = state.speed === 1 ? 2 : 1;
-  showToast(`Speed x${state.speed}`);
-  updateUI();
-});
-pauseBtn.addEventListener('click', () => { state.paused = !state.paused; updateUI(); });
+speedBtn.addEventListener('click', () => { if (!state) return; state.speed = state.speed === 1 ? 2 : 1; showToast(`Speed x${state.speed}`); updateUI(); });
+pauseBtn.addEventListener('click', () => { if (!state) return; state.paused = !state.paused; updateUI(); });
 backBtn.addEventListener('click', () => { if (state) saveGame(); showMenu(); });
-
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  installBtn.classList.remove('hidden');
-});
-installBtn.addEventListener('click', async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  deferredInstallPrompt = null;
-  installBtn.classList.add('hidden');
-});
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
-}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; installBtn.classList.remove('hidden'); });
+installBtn.addEventListener('click', async () => { if (!deferredInstallPrompt) return; deferredInstallPrompt.prompt(); deferredInstallPrompt = null; installBtn.classList.add('hidden'); });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
 
 renderMapCards();
+renderEmptyInfoPanel();
 requestAnimationFrame(loop);
