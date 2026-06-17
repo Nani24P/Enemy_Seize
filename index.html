@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Siege Forge" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <title>Siege Forge</title>
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1>Siege Forge</h1>
+        <p id="subtitle">5-map tower defense PWA</p>
+      </div>
+      <button id="installBtn" class="ghost hidden">Install</button>
+    </header>
+
+    <main>
+      <section id="menu" class="panel screen active">
+        <h2>Choose a Realm</h2>
+        <p class="muted">Tap a map, place towers on green pads, and survive the waves.</p>
+        <div id="mapGrid" class="map-grid"></div>
+      </section>
+
+      <section id="game" class="screen">
+        <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
+        <div class="hud panel">
+          <div class="stats">
+            <span>Map: <b id="mapName">Grass Path</b></span>
+            <span>Wave: <b id="waveText">1</b></span>
+            <span>Gold: <b id="goldText">150</b></span>
+            <span>Lives: <b id="livesText">20</b></span>
+            <span>Score: <b id="scoreText">0</b></span>
+          </div>
+          <div class="actions">
+            <button id="startWaveBtn">Start Wave</button>
+            <button id="pauseBtn" class="ghost">Pause</button>
+            <button id="backBtn" class="ghost">Maps</button>
+          </div>
+        </div>
+        <div id="buildPanel" class="build-panel panel hidden"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
