@@ -185,3 +185,96 @@ body {
 .tower-choice:not(:disabled):hover, .map-card:not(.locked):hover {
   box-shadow: 0 24px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.14);
 }
+
+/* v2.1 real veggie pass */
+.top-actions { display:flex; gap:8px; }
+.meta-row { margin-bottom: 12px; }
+.wave-preview {
+  padding: 12px 14px;
+  border-radius: 22px;
+  display: grid;
+  gap: 10px;
+}
+.preview-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.preview-head b { font-size: 18px; }
+.preview-head span { color: var(--muted); font-size: 13px; }
+.preview-list { display:flex; flex-wrap:wrap; gap:8px; }
+.preview-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background: rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.1);
+  font-size:13px;
+  font-weight:800;
+}
+.preview-pill b {
+  margin-left: 2px;
+  display:inline-grid;
+  place-items:center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(2,6,23,.52);
+}
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2,6,23,.62);
+  backdrop-filter: blur(6px);
+}
+.modal-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 520px);
+  padding: 18px;
+}
+.modal-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.modal-head h2 { margin: 0; font-size: 28px; }
+.setting-list { display:grid; gap:10px; }
+.setting-row, .setting-meta {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 10px;
+  width:100%;
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-weight: 900;
+}
+.setting-row span, .setting-meta span { color: var(--text); }
+.setting-row b, .setting-meta b { color: #7dd3fc; }
+.setting-meta {
+  background: rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+}
+.danger-btn {
+  background: rgba(239,68,68,.12);
+  color: #fecaca;
+  border:1px solid rgba(239,68,68,.28);
+  box-shadow: none;
+}
+@media (max-width: 860px) {
+  .preview-head { align-items:flex-start; flex-direction:column; }
+}

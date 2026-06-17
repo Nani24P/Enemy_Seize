@@ -27,7 +27,10 @@
           </div>
         </div>
       </div>
-      <button id="installBtn" class="ghost icon-btn hidden" aria-label="Install app">⬇️</button>
+      <div class="top-actions">
+        <button id="settingsBtn" class="ghost icon-btn" aria-label="Settings">⚙️</button>
+        <button id="installBtn" class="ghost icon-btn hidden" aria-label="Install app">⬇️</button>
+      </div>
     </header>
 
     <main>
@@ -35,7 +38,7 @@
         <div class="menu-strip">
           <span class="menu-chip">🗺️ Campaign</span>
           <span class="menu-chip">🔓 Unlocks</span>
-          <span class="menu-chip">🥕 Glossy Veggies</span>
+          <span class="menu-chip">📱 Offline Ready</span>
         </div>
         <div id="mapGrid" class="map-grid"></div>
       </section>
@@ -43,18 +46,22 @@
       <section id="game" class="screen">
         <div class="hud panel">
           <div class="hud-left">
-            <div class="map-chip"><span>Realm</span><b id="mapName">Grass Path</b></div>
+            <div class="map-chip"><span>Realm</span><b id="mapName">Forest Trail</b></div>
             <div class="stat-pill"><span>Wave</span><b id="waveText">1</b></div>
             <div class="stat-pill gold"><span>Gold</span><b id="goldText">180</b></div>
             <div class="stat-pill lives"><span>Lives</span><b id="livesText">20</b></div>
             <div class="stat-pill"><span>Score</span><b id="scoreText">0</b></div>
           </div>
           <div class="actions">
-            <button id="startWaveBtn" class="primary-action">▶ Wave</button>
+            <button id="startWaveBtn">▶ Wave</button>
             <button id="speedBtn" class="ghost">⏩ x1</button>
             <button id="pauseBtn" class="ghost">⏸</button>
             <button id="backBtn" class="ghost">🗺</button>
           </div>
+        </div>
+
+        <div class="meta-row">
+          <div id="wavePreview" class="panel wave-preview"></div>
         </div>
 
         <div class="game-layout">
@@ -62,13 +69,35 @@
             <canvas id="gameCanvas" width="960" height="540" aria-label="Siege Forge game board"></canvas>
             <div id="toast" class="toast hidden"></div>
             <div id="infoPanel" class="tower-popover hidden"></div>
-            <div class="board-help">Tap green pads · upgrade from floating forge menu</div>
+            <div class="board-help">Tap green pads · tap towers for the floating forge menu</div>
           </div>
         </div>
 
         <div id="buildPanel" class="build-panel panel hidden"></div>
       </section>
     </main>
+  </div>
+
+  <div id="settingsModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <div class="modal-card panel">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">Settings</div>
+          <h2>Game Options</h2>
+        </div>
+        <button id="closeSettingsBtn" class="ghost icon-btn" aria-label="Close settings">✕</button>
+      </div>
+      <div class="setting-list">
+        <button id="toggleMotionBtn" class="setting-row ghost"></button>
+        <button id="toggleDamageBtn" class="setting-row ghost"></button>
+        <div class="setting-meta">
+          <span>App Version</span>
+          <b>v2.1 · Real Veggie Pass</b>
+        </div>
+        <button id="resetProgressBtn" class="ghost danger-btn">Reset Progress</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="src/main.js"></script>

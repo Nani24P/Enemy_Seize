@@ -26,12 +26,19 @@ const gameScreen = document.getElementById('game');
 const mapGrid = document.getElementById('mapGrid');
 const buildPanel = document.getElementById('buildPanel');
 const infoPanel = document.getElementById('infoPanel');
+const wavePreview = document.getElementById('wavePreview');
 const toast = document.getElementById('toast');
 const startWaveBtn = document.getElementById('startWaveBtn');
 const speedBtn = document.getElementById('speedBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const backBtn = document.getElementById('backBtn');
 const installBtn = document.getElementById('installBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const toggleMotionBtn = document.getElementById('toggleMotionBtn');
+const toggleDamageBtn = document.getElementById('toggleDamageBtn');
+const resetProgressBtn = document.getElementById('resetProgressBtn');
 
 const ui = {
   mapName: document.getElementById('mapName'),
@@ -41,13 +48,36 @@ const ui = {
   scoreText: document.getElementById('scoreText')
 };
 
-const enemyVisuals = {
-  grass: { goblin: '🍅', runner: '🥕', brute: '🍉', shield: '🧅', boss: '🎃' },
-  desert: { goblin: '🧅', runner: '🥕', brute: '🎃', shield: '🥔', boss: '🍉' },
-  ice: { goblin: '🫛', runner: '🧅', brute: '🍈', shield: '🥬', boss: '🎃' },
-  lava: { goblin: '🌶️', runner: '🫑', brute: '🎃', shield: '🥕', boss: '🍉' },
-  temple: { goblin: '🥔', runner: '🧄', brute: '🎃', shield: '🧅', boss: '🍉' }
+const saveKey = 'siege-forge-save-v2-1-real-veg';
+const settingsKey = 'siege-forge-settings-v2-1';
+const towerUnlocks = { arrow: 0, cannon: 0, frost: 1, flame: 2, storm: 3 };
+let state = null;
+let selectedPad = null;
+let selectedTower = null;
+let deferredInstallPrompt = null;
+let lastTime = 0;
+let toastTimer = null;
+let infoPanelLastKey = '';
+let settings = loadSettings();
+
+const veggieKinds = {
+  grass: { goblin: 'tomato', runner: 'carrot', brute: 'watermelon', shield: 'onion', boss: 'pumpkin' },
+  desert: { goblin: 'onion', runner: 'carrot', brute: 'potato', shield: 'pumpkin', boss: 'watermelon' },
+  ice: { goblin: 'pea', runner: 'onion', brute: 'melon', shield: 'cabbage', boss: 'pumpkin' },
+  lava: { goblin: 'chili', runner: 'pepper', brute: 'carrot', shield: 'pumpkin', boss: 'watermelon' },
+  temple: { goblin: 'potato', runner: 'garlic', brute: 'pumpkin', shield: 'onion', boss: 'watermelon' }
 };
+
+const veggieNames = {
+  tomato: 'Tomato', carrot: 'Carrot', watermelon: 'Watermelon', onion: 'Onion', pumpkin: 'Pumpkin', potato: 'Potato',
+  pea: 'Pea Pod', melon: 'Melon', cabbage: 'Cabbage', chili: 'Chili', pepper: 'Pepper', garlic: 'Garlic'
+};
+
+const veggieIcons = {
+  tomato: '🍅', carrot: '🥕', watermelon: '🍉', onion: '🧅', pumpkin: '🎃', potato: '🥔',
+  pea: '🫛', melon: '🍈', cabbage: '🥬', chili: '🌶️', pepper: '🫑', garlic: '🧄'
+};
+
 const mapDecor = {
   grass: [['🌲',66,66,36,.7],['🌳',136,470,34,.7],['🦊',908,440,28,.8],['🦋',826,74,22,.8],['🍄',772,486,20,.8],['🌿',554,512,24,.6],['🐇',46,458,24,.85],['🌼',930,86,20,.78],['🌱',364,22,20,.8],['🪵',880,206,22,.7],['🌲',922,298,30,.66],['🪲',58,180,18,.85]],
   desert: [['🌵',68,72,32,.72],['🌵',900,412,30,.72],['🪨',842,62,28,.72],['🐪',110,506,26,.82],['☀️',912,98,28,.88],['🦂',782,512,20,.86],['🏺',532,42,22,.72],['🌵',696,104,28,.74],['🦎',64,282,18,.82],['🪨',276,34,20,.76]],
@@ -55,6 +85,7 @@ const mapDecor = {
   lava: [['🌋',72,68,34,.76],['🔥',918,76,30,.82],['🪨',80,472,28,.76],['🦂',902,438,18,.86],['🔥',676,516,24,.82],['🐉',870,262,24,.62],['🪨',356,520,22,.78],['♨️',236,30,20,.74]],
   temple: [['🏛️',70,44,28,.82],['🕯️',914,84,22,.8],['🦉',896,494,22,.84],['🔮',516,148,20,.84],['🏺',82,500,24,.82],['✨',922,224,20,.8],['🪷',638,510,22,.82],['🐍',936,356,18,.84]]
 };
+
 const terrainScatter = {
   grass: ['rgba(74,222,128,.08)', 24, 42],
   desert: ['rgba(251,191,36,.07)', 22, 44],
@@ -62,31 +93,40 @@ const terrainScatter = {
   lava: ['rgba(251,113,133,.07)', 22, 46],
   temple: ['rgba(192,132,252,.07)', 20, 44]
 };
-function getEnemyEmoji(mapId, type) { return enemyVisuals[mapId]?.[type] || '🥕'; }
 
-let state;
-let selectedPad = null;
-let selectedTower = null;
-let lastTime = 0;
-let deferredInstallPrompt = null;
-let toastTimer = null;
-const saveKey = 'siege-forge-save-v2-0-phase2';
-const towerUnlocks = { arrow: 0, cannon: 0, frost: 1, flame: 2, storm: 3 };
-const phase2MapGoals = [0, 10, 12, 14, 16];
-let infoPanelLastKey = '';
+function loadSave() {
+  try {
+    return JSON.parse(localStorage.getItem(saveKey)) || { best: {}, progress: { completedMaps: 0, bestWave: {}, completed: {} } };
+  } catch {
+    return { best: {}, progress: { completedMaps: 0, bestWave: {}, completed: {} } };
+  }
+}
+
+function loadSettings() {
+  try {
+    return Object.assign({ reducedMotion: false, showDamage: true }, JSON.parse(localStorage.getItem(settingsKey)) || {});
+  } catch {
+    return { reducedMotion: false, showDamage: true };
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem(settingsKey, JSON.stringify(settings));
+}
 
 function getProgress() {
-  const save = loadSave();
-  return save.progress || { completedMaps: 0, bestWave: {}, completed: {} };
+  return loadSave().progress || { completedMaps: 0, bestWave: {}, completed: {} };
 }
+
 function isMapUnlocked(index) {
   const progress = getProgress();
   return index === 0 || (progress.completedMaps || 0) >= index;
 }
+
 function isTowerUnlocked(kind) {
-  const progress = getProgress();
-  return (progress.completedMaps || 0) >= (towerUnlocks[kind] || 0);
+  return (getProgress().completedMaps || 0) >= (towerUnlocks[kind] || 0);
 }
+
 function recordProgress(waveJustCleared = null) {
   if (!state) return;
   const save = loadSave();
@@ -102,20 +142,11 @@ function recordProgress(waveJustCleared = null) {
   localStorage.setItem(saveKey, JSON.stringify(save));
 }
 
-function loadSave() {
-  try { return JSON.parse(localStorage.getItem(saveKey)) || { best: {}, progress: { completedMaps: 0, bestWave: {}, completed: {} } }; }
-  catch { return { best: {}, progress: { completedMaps: 0, bestWave: {}, completed: {} } }; }
-}
-
-function saveGame() {
-  recordProgress();
-}
-
 function showToast(text) {
   toast.textContent = text;
   toast.classList.remove('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.add('hidden'), 1300);
+  toastTimer = setTimeout(() => toast.classList.add('hidden'), 1500);
 }
 
 function showMenu() {
@@ -123,6 +154,8 @@ function showMenu() {
   gameScreen.classList.remove('active');
   buildPanel.classList.add('hidden');
   infoPanel.classList.add('hidden');
+  selectedTower = null;
+  selectedPad = null;
   renderMapCards();
 }
 
@@ -150,7 +183,7 @@ function renderMapCards() {
           <div class="map-mini-icons"><span>${map.veggieIcons?.[0] || '🍅'}</span><span>${map.veggieIcons?.[1] || '🥕'}</span><span>${map.veggieIcons?.[2] || '🎃'}</span></div>
         </div>
         <div class="map-title">${map.name}</div>
-        <div class="map-caption">${unlocked ? `${(map.veggieIcons || []).join('  ')} · ${map.wavesToWin} waves` : unlockText}</div>
+        <div class="map-caption">${unlocked ? `${map.wavesToWin} campaign waves` : unlockText}</div>
       </div>
       <div class="map-footer">
         <div class="best">${completed ? '🏆 Cleared' : `★ ${save.best?.[map.id] || 0}`}</div>
@@ -176,6 +209,7 @@ function startMap(map) {
     effects: [],
     floating: [],
     spawnQueue: [],
+    currentWaveTypes: [],
     spawnTimer: 0,
     waveActive: false,
     paused: false,
@@ -185,6 +219,7 @@ function startMap(map) {
   };
   selectedPad = null;
   selectedTower = null;
+  infoPanelLastKey = '';
   ui.mapName.textContent = `${map.icon || '🗺️'} ${map.name}`;
   showGame();
   updateUI();
@@ -200,10 +235,12 @@ function updateUI() {
   ui.livesText.textContent = state.lives;
   ui.scoreText.textContent = state.score;
   startWaveBtn.disabled = state.waveActive || state.gameOver;
-  startWaveBtn.textContent = state.won ? 'Endless Wave' : 'Start Wave';
-  pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
-  speedBtn.textContent = `Speed x${state.speed}`;
+  startWaveBtn.textContent = state.won ? '▶ Endless' : '▶ Wave';
+  pauseBtn.textContent = state.paused ? '▶' : '⏸';
+  speedBtn.textContent = `⏩ x${state.speed}`;
+  renderWavePreview();
   renderInfoPanel();
+  renderSettings();
 }
 
 function makeWave(wave) {
@@ -220,17 +257,48 @@ function makeWave(wave) {
   return list;
 }
 
+function summarizeWave(types, mapId) {
+  const counts = {};
+  types.forEach(type => {
+    const kind = veggieKinds[mapId]?.[type] || 'tomato';
+    counts[kind] = (counts[kind] || 0) + 1;
+  });
+  return Object.entries(counts).map(([kind, count]) => ({ kind, count }));
+}
+
+function renderWavePreview() {
+  if (!state) {
+    wavePreview.innerHTML = '<div class="preview-head"><b>Campaign</b><span>Select a map to begin</span></div>';
+    return;
+  }
+  const types = state.waveActive ? state.currentWaveTypes : makeWave(state.wave);
+  const summary = summarizeWave(types, state.map.id);
+  const title = state.waveActive ? `Wave ${state.wave} active` : `Next wave ${state.wave}`;
+  const sub = state.waveActive ? `${state.spawnQueue.length} left to spawn` : `${types.length} enemies incoming`;
+  wavePreview.innerHTML = `
+    <div class="preview-head"><b>${title}</b><span>${sub}</span></div>
+    <div class="preview-list">
+      ${summary.map(item => `<span class="preview-pill">${veggieIcons[item.kind] || '🥕'} ${veggieNames[item.kind] || item.kind}<b>${item.count}</b></span>`).join('')}
+    </div>
+  `;
+}
+
+function getVeggieKind(mapId, type) {
+  return veggieKinds[mapId]?.[type] || 'tomato';
+}
+
 function startWave() {
-  if (state.waveActive || state.gameOver) return;
-  state.spawnQueue = makeWave(state.wave).map((type, index) => ({ type, delay: index * 0.48 }));
+  if (!state || state.waveActive || state.gameOver) return;
+  state.currentWaveTypes = makeWave(state.wave);
+  state.spawnQueue = state.currentWaveTypes.map((type, index) => ({ type, delay: index * 0.48 }));
   state.spawnTimer = 0;
   state.waveActive = true;
   buildPanel.classList.add('hidden');
   selectedPad = null;
   if (state.wave % 5 === 0) {
     state.effects.push({ type: 'bossText', x: canvas.width / 2, y: 118, color: '#facc15', life: 1.35, max: 1.35 });
-    showToast('🎃 Boss veggie wave');
-  } else showToast(`🌱 Wave ${state.wave}`);
+    showToast('Boss veggie wave');
+  } else showToast(`Wave ${state.wave}`);
   updateUI();
 }
 
@@ -240,20 +308,18 @@ function spawnEnemy(type) {
   const useSecondPath = state.map.secondPath && Math.random() > 0.5;
   const path = useSecondPath ? state.map.secondPath : state.map.path;
   const [x, y] = path[0];
+  const kind = getVeggieKind(state.map.id, type);
   state.enemies.push({
     type,
+    kind,
+    label: veggieNames[kind] || kind,
     ...def,
-    emoji: getEnemyEmoji(state.map.id, type),
     maxHp: Math.floor(def.hp * scale),
     hp: Math.floor(def.hp * scale),
     speed: def.speed * (state.map.id === 'lava' ? 1.12 : 1),
-    x, y,
-    path,
-    pathIndex: 1,
-    slowUntil: 0,
-    slowFactor: 1,
-    burnUntil: 0,
-    burnDps: 0,
+    x, y, path, pathIndex: 1,
+    slowUntil: 0, slowFactor: 1,
+    burnUntil: 0, burnDps: 0,
     reached: false
   });
 }
@@ -263,11 +329,8 @@ function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function update(dt, now) {
   if (!state || state.paused || state.gameOver) return;
   dt *= state.speed;
-
   state.spawnTimer += dt;
-  while (state.spawnQueue.length && state.spawnTimer >= state.spawnQueue[0].delay) {
-    spawnEnemy(state.spawnQueue.shift().type);
-  }
+  while (state.spawnQueue.length && state.spawnTimer >= state.spawnQueue[0].delay) spawnEnemy(state.spawnQueue.shift().type);
 
   for (const enemy of state.enemies) {
     if (enemy.burnUntil > now) enemy.hp -= enemy.burnDps * dt;
@@ -298,7 +361,7 @@ function update(dt, now) {
     if (!target) continue;
     fireTower(tower, target, now);
     tower.cooldown = tower.fireRate / tower.level;
-    tower.flash = 0.12;
+    tower.flash = settings.reducedMotion ? 0.05 : 0.12;
   }
 
   for (const tower of state.towers) tower.flash = Math.max(0, (tower.flash || 0) - dt);
@@ -315,7 +378,7 @@ function update(dt, now) {
   for (const enemy of killed) {
     state.gold += enemy.reward;
     state.score += enemy.reward + state.wave * 2;
-    state.floating.push({ x: enemy.x, y: enemy.y, text: `+${enemy.reward}`, color: '#facc15', life: 0.8, max: 0.8 });
+    if (settings.showDamage) state.floating.push({ x: enemy.x, y: enemy.y, text: `+${enemy.reward}`, color: '#facc15', life: 0.8, max: 0.8 });
     state.effects.push({ type: 'pop', x: enemy.x, y: enemy.y, color: enemy.color, life: 0.35, max: 0.35 });
   }
   state.enemies = state.enemies.filter(e => e.hp > 0 && !e.reached);
@@ -323,7 +386,7 @@ function update(dt, now) {
   if (state.lives <= 0) {
     state.gameOver = true;
     state.lives = 0;
-    saveGame();
+    recordProgress();
     showToast('Game over');
   }
 
@@ -334,7 +397,7 @@ function update(dt, now) {
     if (state.wave >= state.map.wavesToWin) state.won = true;
     recordProgress(state.wave);
     state.wave += 1;
-    showToast(state.won ? '🏆 Map cleared · new unlocks!' : 'Wave cleared · bonus gold');
+    showToast(state.won ? 'Map cleared · new unlocks!' : 'Wave cleared · bonus gold');
   }
   updateUI();
 }
@@ -347,9 +410,7 @@ function fireTower(tower, target, now) {
 
   if (def.splash) {
     state.effects.push({ type: 'ring', x: target.x, y: target.y, color: def.color, life: 0.28, max: 0.28, radius: def.splash });
-    for (const e of state.enemies) {
-      if (e !== target && dist(e, target) <= def.splash) applyDamage(e, damage * 0.55, tower.kind);
-    }
+    for (const e of state.enemies) if (e !== target && dist(e, target) <= def.splash) applyDamage(e, damage * 0.55, tower.kind);
   }
   if (def.slow) {
     target.slowFactor = def.slow;
@@ -361,9 +422,7 @@ function fireTower(tower, target, now) {
     target.burnUntil = now + def.burnTime;
   }
   if (def.chain) {
-    const chained = state.enemies
-      .filter(e => e !== target && e.hp > 0 && dist(e, target) <= 120)
-      .slice(0, def.chain + tower.level - 1);
+    const chained = state.enemies.filter(e => e !== target && e.hp > 0 && dist(e, target) <= 120).slice(0, def.chain + tower.level - 1);
     chained.forEach(e => {
       applyDamage(e, damage * 0.65, tower.kind);
       state.projectiles.push({ x: target.x, y: target.y, tx: e.x, ty: e.y, color: def.color, life: 0.18, kind: 'storm' });
@@ -375,8 +434,10 @@ function applyDamage(enemy, amount, kind) {
   let final = amount;
   if (enemy.armor && kind === 'arrow') final *= enemy.armor;
   enemy.hp -= final;
+  if (settings.showDamage && final > 0 && !settings.reducedMotion) {
+    state.floating.push({ x: enemy.x, y: enemy.y - 14, text: `${Math.round(final)}`, color: '#ffffff', life: 0.45, max: 0.45 });
+  }
 }
-
 
 function drawMapDecoration(map) {
   const [fill, count, baseSize] = terrainScatter[map.id] || terrainScatter.grass;
@@ -401,22 +462,19 @@ function drawGridPath(path, color) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = 'rgba(15, 23, 42, 0.78)';
-  ctx.beginPath();
-  path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-  ctx.stroke();
+  ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
   ctx.lineWidth = 50;
-  ctx.strokeStyle = color;
-  ctx.beginPath();
-  path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-  ctx.stroke();
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, 'rgba(22,32,55,.96)');
+  ctx.strokeStyle = grad;
+  ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
   ctx.lineWidth = 2;
   ctx.strokeStyle = 'rgba(255,255,255,.16)';
-  ctx.beginPath();
-  path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-  ctx.stroke();
+  ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
 }
 
-function drawTower(tower, now) {
+function drawTower(tower) {
   const def = TOWERS[tower.kind];
   const isSelected = selectedTower === tower;
   if (isSelected) {
@@ -425,7 +483,6 @@ function drawTower(tower, now) {
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
-
   const pulse = tower.flash ? tower.flash * 25 : 0;
   const size = 21 + tower.level * 3 + pulse;
   ctx.shadowColor = def.color;
@@ -435,78 +492,185 @@ function drawTower(tower, now) {
   ctx.lineWidth = 6;
   ctx.beginPath(); ctx.arc(tower.x, tower.y, size, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.shadowBlur = 0;
-
   ctx.fillStyle = 'rgba(2,6,23,.92)';
   ctx.beginPath(); ctx.arc(tower.x, tower.y, 14, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#f8fafc';
   ctx.font = 'bold 20px system-ui';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(def.icon, tower.x, tower.y + 1);
-
   for (let i = 0; i < tower.level; i++) {
     ctx.fillStyle = '#facc15';
     ctx.beginPath(); ctx.arc(tower.x - 11 + i * 11, tower.y + size + 8, 3.2, 0, Math.PI * 2); ctx.fill();
   }
 }
 
+function applyStrokeFill(fill, stroke, lineWidth = 2) {
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = lineWidth;
+  ctx.fill();
+  ctx.stroke();
+}
 
-function drawGlossyVeggie(enemy, now) {
-  const slowed = enemy.slowUntil > now;
-  const burning = enemy.burnUntil > now;
-  const r = enemy.radius + (enemy.type === 'boss' ? 11 : 8);
+function drawLeafCluster(x, y, scale = 1, color = '#2f8f3d') {
   ctx.save();
-  ctx.shadowColor = burning ? '#fb7185' : (slowed ? '#67e8f9' : 'rgba(0,0,0,.45)');
-  ctx.shadowBlur = burning || slowed ? 18 : 8;
-  const grad = ctx.createRadialGradient(enemy.x - r * .35, enemy.y - r * .42, 2, enemy.x, enemy.y, r + 8);
-  grad.addColorStop(0, 'rgba(255,255,255,.92)');
-  grad.addColorStop(.22, 'rgba(255,255,255,.30)');
-  grad.addColorStop(.62, enemy.color || '#84cc16');
-  grad.addColorStop(1, 'rgba(2,6,23,.78)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.translate(x, y);
+  ctx.fillStyle = color;
+  for (const angle of [-0.9, -0.2, 0.4]) {
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.ellipse(0, -5 * scale, 4 * scale, 10 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawVeggieBody(enemy) {
+  const x = enemy.x;
+  const y = enemy.y;
+  const scale = enemy.type === 'boss' ? 1.28 : (enemy.type === 'brute' ? 1.08 : 0.92);
+  const r = enemy.radius * scale;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.shadowColor = enemy.burnUntil > 0 ? 'rgba(251,113,133,.28)' : 'rgba(0,0,0,.24)';
+  ctx.shadowBlur = settings.reducedMotion ? 4 : 10;
+  ctx.fillStyle = 'rgba(2,6,23,.22)';
+  ctx.beginPath(); ctx.ellipse(0, r + 6, r * 0.82, 5, 0, 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(255,255,255,.42)';
-  ctx.beginPath();
-  ctx.ellipse(enemy.x - r * .28, enemy.y - r * .34, r * .22, r * .12, -0.55, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(2,6,23,.35)';
-  ctx.beginPath();
-  ctx.ellipse(enemy.x, enemy.y + r + 5, r * .75, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.font = `${enemy.type === 'boss' ? 34 : enemy.type === 'brute' ? 28 : 23}px system-ui`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(enemy.emoji || '🥕', enemy.x, enemy.y + 1);
+
+  const matteHighlight = settings.reducedMotion ? 0.08 : 0.12;
+  const kind = enemy.kind;
+
+  const stem = (sx = 0, sy = 0, w = 4, h = 10, color = '#2f7d32') => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(sx - w / 2, sy - h, w, h, 2);
+    ctx.fill();
+  };
+
+  if (kind === 'tomato') {
+    const g = ctx.createRadialGradient(-r * 0.32, -r * 0.4, 1, 0, 0, r * 1.25);
+    g.addColorStop(0, '#e86b66'); g.addColorStop(0.55, '#d8443a'); g.addColorStop(1, '#9e1f1c');
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.95, r * 0.88, 0, 0, Math.PI * 2); applyStrokeFill(g, '#7b1918', 2);
+    ctx.strokeStyle = `rgba(255,255,255,${matteHighlight})`; ctx.lineWidth = 1.5;
+    for (const gx of [-0.45, 0, 0.45]) { ctx.beginPath(); ctx.moveTo(gx * r, -r * 0.55); ctx.quadraticCurveTo(gx * r * 1.35, 0, gx * r, r * 0.55); ctx.stroke(); }
+    drawLeafCluster(0, -r * 0.76, 0.8, '#2d8d38');
+  } else if (kind === 'carrot') {
+    const g = ctx.createLinearGradient(0, -r, 0, r);
+    g.addColorStop(0, '#f5a544'); g.addColorStop(1, '#dd6f12');
+    ctx.beginPath(); ctx.moveTo(0, r); ctx.lineTo(-r * 0.46, -r * 0.75); ctx.quadraticCurveTo(0, -r * 0.98, r * 0.46, -r * 0.75); ctx.closePath(); applyStrokeFill(g, '#9a4608', 2);
+    ctx.strokeStyle = `rgba(120,60,20,${0.25})`; ctx.lineWidth = 1.25;
+    for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(-r * 0.25, -i * 4); ctx.lineTo(r * 0.2, -i * 4 - 4); ctx.stroke(); }
+    drawLeafCluster(0, -r * 0.83, 0.85, '#3ea74d');
+  } else if (kind === 'onion') {
+    const g = ctx.createRadialGradient(-r * 0.25, -r * 0.35, 1, 0, 0, r * 1.2);
+    g.addColorStop(0, '#f9e2ca'); g.addColorStop(0.62, '#dfbd9a'); g.addColorStop(1, '#b38358');
+    ctx.beginPath(); ctx.moveTo(0, -r); ctx.bezierCurveTo(r * 0.95, -r * 0.52, r * 0.72, r * 0.65, 0, r); ctx.bezierCurveTo(-r * 0.72, r * 0.65, -r * 0.95, -r * 0.52, 0, -r); applyStrokeFill(g, '#8c5a31', 2);
+    ctx.strokeStyle = `rgba(255,255,255,${matteHighlight})`; ctx.lineWidth = 1.3;
+    for (const gx of [-0.24, 0, 0.24]) { ctx.beginPath(); ctx.moveTo(gx * r, -r * 0.7); ctx.quadraticCurveTo(gx * r * 1.35, 0, gx * r, r * 0.74); ctx.stroke(); }
+    stem(0, -r * 0.95, 4, 8, '#7fb348');
+    ctx.strokeStyle = '#8c5a31'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, r); ctx.lineTo(-1, r + 6); ctx.moveTo(0, r); ctx.lineTo(0, r + 7); ctx.moveTo(4, r); ctx.lineTo(2, r + 6); ctx.stroke();
+  } else if (kind === 'watermelon') {
+    const g = ctx.createLinearGradient(0, -r, 0, r);
+    g.addColorStop(0, '#67bb5b'); g.addColorStop(1, '#2d6f2d');
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 1.06, r * 0.9, 0, 0, Math.PI * 2); applyStrokeFill(g, '#1f4e22', 2.5);
+    ctx.strokeStyle = '#3f8340'; ctx.lineWidth = 2;
+    for (const gx of [-0.58, -0.24, 0.12, 0.45]) { ctx.beginPath(); ctx.moveTo(gx * r, -r * 0.74); ctx.quadraticCurveTo(gx * r * 1.15, 0, gx * r, r * 0.74); ctx.stroke(); }
+  } else if (kind === 'pumpkin') {
+    const g = ctx.createRadialGradient(-r * 0.22, -r * 0.3, 1, 0, 0, r * 1.22);
+    g.addColorStop(0, '#ffb55a'); g.addColorStop(0.58, '#e67f20'); g.addColorStop(1, '#8d4312');
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.92, 0, Math.PI * 2); applyStrokeFill(g, '#7a370f', 2.5);
+    ctx.strokeStyle = 'rgba(125,55,14,.45)'; ctx.lineWidth = 2;
+    for (const gx of [-0.52, -0.2, 0.2, 0.52]) { ctx.beginPath(); ctx.moveTo(gx * r, -r * 0.75); ctx.quadraticCurveTo(gx * r * 1.2, 0, gx * r, r * 0.75); ctx.stroke(); }
+    stem(0, -r * 0.78, 7, 12, '#436b1e');
+  } else if (kind === 'potato') {
+    const g = ctx.createLinearGradient(0, -r, 0, r);
+    g.addColorStop(0, '#c39a66'); g.addColorStop(1, '#8d6845');
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.8, 0.1, 0, Math.PI * 2); applyStrokeFill(g, '#6d4c30', 2);
+    ctx.fillStyle = '#6d4c30';
+    for (const p of [[-6,-5],[7,-2],[-3,6],[5,7]]) { ctx.beginPath(); ctx.arc(p[0], p[1], 1.7, 0, Math.PI * 2); ctx.fill(); }
+  } else if (kind === 'pea') {
+    const g = ctx.createLinearGradient(-r, 0, r, 0);
+    g.addColorStop(0, '#96d96a'); g.addColorStop(1, '#4b9832');
+    ctx.beginPath(); ctx.moveTo(-r, 0); ctx.quadraticCurveTo(-r * 0.3, -r * 0.8, r * 0.95, -r * 0.1); ctx.quadraticCurveTo(r * 0.3, r * 0.8, -r, 0); applyStrokeFill(g, '#3f7a28', 2);
+    ctx.fillStyle = '#78bf50';
+    for (const px of [-0.45, -0.05, 0.34]) { ctx.beginPath(); ctx.arc(px * r, 0, r * 0.2, 0, Math.PI * 2); ctx.fill(); }
+  } else if (kind === 'melon') {
+    const g = ctx.createRadialGradient(-r * 0.25, -r * 0.25, 1, 0, 0, r * 1.15);
+    g.addColorStop(0, '#d5f0b2'); g.addColorStop(0.6, '#93bb60'); g.addColorStop(1, '#698d40');
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.86, 0, 0, Math.PI * 2); applyStrokeFill(g, '#5c7d36', 2);
+    ctx.strokeStyle = '#b8d796'; ctx.lineWidth = 1.6;
+    for (const gx of [-0.45, -0.12, 0.22, 0.52]) { ctx.beginPath(); ctx.moveTo(gx * r, -r * 0.72); ctx.quadraticCurveTo(gx * r * 1.16, 0, gx * r, r * 0.72); ctx.stroke(); }
+  } else if (kind === 'cabbage') {
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.35, 1, 0, 0, r * 1.2);
+    g.addColorStop(0, '#bfe8a2'); g.addColorStop(0.68, '#77b460'); g.addColorStop(1, '#436f34');
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.92, 0, Math.PI * 2); applyStrokeFill(g, '#355a2c', 2);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.3;
+    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(0, 0, r * (0.25 + i * 0.16), 0.7, 2.5); ctx.stroke(); }
+  } else if (kind === 'garlic') {
+    const g = ctx.createRadialGradient(-r * 0.28, -r * 0.35, 1, 0, 0, r * 1.1);
+    g.addColorStop(0, '#fff7de'); g.addColorStop(0.75, '#d8d1b1'); g.addColorStop(1, '#aaa387');
+    for (const offset of [-0.32, 0, 0.32]) {
+      ctx.beginPath(); ctx.ellipse(offset * r, offset === 0 ? 0 : 3, r * 0.34, r * 0.52, 0, 0, Math.PI * 2); applyStrokeFill(g, '#8d876f', 1.5);
+    }
+    stem(0, -r * 0.86, 5, 11, '#c9c49e');
+  } else if (kind === 'chili') {
+    ctx.save();
+    ctx.rotate(-0.25);
+    const g = ctx.createLinearGradient(-r, -r * 0.6, r, r * 0.6);
+    g.addColorStop(0, '#ef6a53'); g.addColorStop(1, '#b31e18');
+    ctx.beginPath(); ctx.moveTo(-r * 0.92, -r * 0.18); ctx.quadraticCurveTo(-r * 0.2, -r * 0.85, r * 0.86, -r * 0.05); ctx.quadraticCurveTo(r * 0.4, r * 0.54, -r * 0.95, 0.18); ctx.closePath(); applyStrokeFill(g, '#7f1513', 2);
+    ctx.restore();
+    drawLeafCluster(-r * 0.66, -r * 0.2, 0.5, '#41782d');
+  } else if (kind === 'pepper') {
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.32, 1, 0, 0, r * 1.15);
+    g.addColorStop(0, '#78db64'); g.addColorStop(0.58, '#429a3b'); g.addColorStop(1, '#2a6730');
+    ctx.beginPath();
+    ctx.moveTo(0, -r);
+    ctx.bezierCurveTo(r * 0.92, -r * 0.8, r * 0.88, r * 0.48, 0, r);
+    ctx.bezierCurveTo(-r * 0.88, r * 0.48, -r * 0.92, -r * 0.8, 0, -r);
+    applyStrokeFill(g, '#24522a', 2);
+    ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, -r * 0.8); ctx.quadraticCurveTo(2, 0, 0, r * 0.72); ctx.stroke();
+    stem(0, -r * 0.94, 6, 9, '#2d6926');
+  }
+
+  ctx.restore();
+}
+
+function drawVeggieEnemy(enemy, now) {
+  ctx.save();
+  if (enemy.slowUntil > now) {
+    ctx.shadowColor = '#67e8f9';
+    ctx.shadowBlur = settings.reducedMotion ? 4 : 14;
+  } else if (enemy.burnUntil > now) {
+    ctx.shadowColor = '#fb7185';
+    ctx.shadowBlur = settings.reducedMotion ? 4 : 14;
+  }
+  drawVeggieBody(enemy);
+  ctx.restore();
+
   if (enemy.type === 'shield') {
     ctx.strokeStyle = 'rgba(248,250,252,.95)';
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(enemy.x, enemy.y, r + 6, -0.95, 0.95);
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 12, -0.95, 0.95); ctx.stroke();
   }
   if (enemy.type === 'boss') {
     ctx.fillStyle = 'rgba(2,6,23,.82)';
-    ctx.beginPath();
-    ctx.roundRect(enemy.x - 18, enemy.y - r - 24, 36, 18, 8);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(enemy.x - 18, enemy.y - enemy.radius - 24, 36, 18, 8); ctx.fill();
     ctx.fillStyle = '#fef08a';
     ctx.font = 'bold 10px system-ui';
-    ctx.fillText('BOSS', enemy.x, enemy.y - r - 15);
+    ctx.textAlign = 'center';
+    ctx.fillText('BOSS', enemy.x, enemy.y - enemy.radius - 11);
   }
-  const hpw = enemy.type === 'boss' ? 72 : 48;
+  const hpw = enemy.type === 'boss' ? 74 : 48;
   const hpPct = Math.max(0, enemy.hp / enemy.maxHp);
   ctx.fillStyle = 'rgba(15,23,42,.96)';
-  ctx.beginPath();
-  ctx.roundRect(enemy.x - hpw / 2, enemy.y - r - 13, hpw, 7, 4);
-  ctx.fill();
+  ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 18, hpw, 7, 4); ctx.fill();
   ctx.fillStyle = hpPct > .45 ? '#22c55e' : (hpPct > .2 ? '#facc15' : '#ef4444');
-  ctx.beginPath();
-  ctx.roundRect(enemy.x - hpw / 2, enemy.y - r - 13, hpw * hpPct, 7, 4);
-  ctx.fill();
-  ctx.restore();
+  ctx.beginPath(); ctx.roundRect(enemy.x - hpw / 2, enemy.y - enemy.radius - 18, hpw * hpPct, 7, 4); ctx.fill();
 }
 
 function draw(now) {
@@ -518,18 +682,9 @@ function draw(now) {
   gradient.addColorStop(1, '#020617');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  for (let x = 0; x < canvas.width; x += 60) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.035)';
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-  }
-  for (let y = 0; y < canvas.height; y += 60) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.035)';
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-  }
-
+  for (let x = 0; x < canvas.width; x += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+  for (let y = 0; y < canvas.height; y += 60) { ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
   drawMapDecoration(state.map);
-
   drawGridPath(state.map.path, pathColor);
   if (state.map.secondPath) drawGridPath(state.map.secondPath, pathColor);
 
@@ -548,15 +703,14 @@ function draw(now) {
     }
   }
 
-  for (const tower of state.towers) drawTower(tower, now);
-
-  for (const enemy of state.enemies) drawGlossyVeggie(enemy, now);
+  for (const tower of state.towers) drawTower(tower);
+  for (const enemy of state.enemies) drawVeggieEnemy(enemy, now);
 
   for (const p of state.projectiles) {
     ctx.strokeStyle = p.color;
     ctx.lineWidth = p.kind === 'storm' ? 3 : 4;
     ctx.shadowColor = p.color;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = settings.reducedMotion ? 0 : 8;
     ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.tx, p.ty); ctx.stroke();
     ctx.shadowBlur = 0;
   }
@@ -571,9 +725,11 @@ function draw(now) {
       ctx.font = 'bold 40px system-ui';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🎃 BOSS VEGGIE WAVE', fx.x, fx.y - (1 - pct) * 18);
+      const drift = settings.reducedMotion ? 0 : (1 - pct) * 18;
+      ctx.fillText('BOSS VEGGIE WAVE', fx.x, fx.y - drift);
     } else if (fx.type === 'ring' || fx.type === 'pop' || fx.type === 'leak') {
-      const r = (fx.radius || 34) * (1.2 - pct);
+      const grow = settings.reducedMotion ? 1 : (1.2 - pct);
+      const r = (fx.radius || 34) * grow;
       ctx.beginPath(); ctx.arc(fx.x, fx.y, r, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -582,8 +738,11 @@ function draw(now) {
   for (const f of state.floating) {
     const pct = Math.max(0, f.life / f.max);
     ctx.globalAlpha = pct;
-    ctx.fillStyle = f.color || '#facc15'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(f.text, f.x, f.y - (1 - pct) * 42);
+    ctx.fillStyle = f.color || '#facc15';
+    ctx.font = 'bold 20px system-ui';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const rise = settings.reducedMotion ? 8 : (1 - pct) * 42;
+    ctx.fillText(f.text, f.x, f.y - rise);
     ctx.globalAlpha = 1;
   }
 
@@ -592,13 +751,12 @@ function draw(now) {
     ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.font = 'bold 44px system-ui';
     ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
   }
-
   if (state.gameOver || state.won) {
     ctx.fillStyle = 'rgba(2,6,23,.72)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.font = 'bold 48px system-ui';
     ctx.fillText(state.gameOver ? 'Game Over' : 'Map Cleared!', canvas.width / 2, 230);
     ctx.font = '24px system-ui';
-    ctx.fillText(state.gameOver ? 'Try a stronger choke point next run.' : 'Continue into endless waves or return to maps.', canvas.width / 2, 275);
+    ctx.fillText(state.gameOver ? 'Try a stronger choke point next run.' : 'Return to maps to try the next realm.', canvas.width / 2, 275);
   }
 }
 
@@ -672,7 +830,7 @@ function upgradeTower(tower) {
   state.gold -= upgradeCost;
   tower.level += 1;
   tower.range += 10;
-  tower.flash = 0.4;
+  tower.flash = settings.reducedMotion ? 0.12 : 0.4;
   state.effects.push({ type: 'ring', x: tower.x, y: tower.y, color: def.color, life: 0.45, max: 0.45, radius: tower.range });
   showToast(`${def.name} upgraded to level ${tower.level}`);
   infoPanelLastKey = '';
@@ -705,14 +863,14 @@ function openBuildPanel(pad) {
   `;
   const grid = buildPanel.querySelector('.tower-grid');
   Object.entries(TOWERS).forEach(([kind, t]) => {
-    const btn = document.createElement('button');
     const unlocked = isTowerUnlocked(kind);
+    const btn = document.createElement('button');
     btn.className = `tower-choice ${unlocked ? '' : 'locked-tower'}`;
     btn.disabled = !unlocked || state.gold < t.cost;
     btn.style.background = `linear-gradient(145deg, ${t.dark}dd, rgba(255,255,255,.06))`;
     const unlockLabel = unlocked ? `${t.cost}g` : `🔒 Map ${towerUnlocks[kind] + 1}`;
     btn.innerHTML = `
-      <span class="top"><span class="icon" style="color:${t.color}; background:${t.dark};">${t.icon}</span><span class="cost">${unlockLabel}</span></span>
+      <span class="top"><span class="icon" style="color:${t.color};">${t.icon}</span><span class="cost">${unlockLabel}</span></span>
       <b>${t.name}</b>
       <small>${t.role}<br>${t.note}</small>
       <span class="strategy">${unlocked ? t.strategy : 'Clear earlier maps to unlock.'}</span>
@@ -747,6 +905,22 @@ function selectExistingTower(tower) {
   renderInfoPanel(true);
 }
 
+function renderSettings() {
+  toggleMotionBtn.innerHTML = `<span>Reduced Motion</span><b>${settings.reducedMotion ? 'On' : 'Off'}</b>`;
+  toggleDamageBtn.innerHTML = `<span>Damage Numbers</span><b>${settings.showDamage ? 'On' : 'Off'}</b>`;
+}
+
+function openSettings() {
+  renderSettings();
+  settingsModal.classList.remove('hidden');
+  settingsModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeSettings() {
+  settingsModal.classList.add('hidden');
+  settingsModal.setAttribute('aria-hidden', 'true');
+}
+
 infoPanel.addEventListener('click', event => {
   const button = event.target.closest('button[data-action]');
   if (!button || !selectedTower) return;
@@ -765,33 +939,34 @@ canvas.addEventListener('pointerdown', event => {
   if (!state || state.gameOver) return;
   const p = canvasPoint(event);
   const tower = state.towers.find(t => Math.hypot(p.x - t.x, p.y - t.y) <= 34);
-  if (tower) {
-    selectExistingTower(tower);
-    return;
-  }
+  if (tower) return selectExistingTower(tower);
   const pad = state.map.pads.find(([x, y]) => Math.hypot(p.x - x, p.y - y) <= 36);
   if (pad) {
     const occupied = state.towers.some(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10);
-    if (occupied) {
-      const existing = state.towers.find(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10);
-      selectExistingTower(existing);
-    } else openBuildPanel(pad);
-  } else {
-    buildPanel.classList.add('hidden');
-    selectedPad = null;
-    selectedTower = null;
-    renderInfoPanel();
+    if (occupied) return selectExistingTower(state.towers.find(t => Math.hypot(t.x - pad[0], t.y - pad[1]) < 10));
+    return openBuildPanel(pad);
   }
+  buildPanel.classList.add('hidden');
+  selectedPad = null;
+  selectedTower = null;
+  renderInfoPanel();
 });
 
 startWaveBtn.addEventListener('click', startWave);
-speedBtn.addEventListener('click', () => {
-  state.speed = state.speed === 1 ? 2 : 1;
-  showToast(`Speed x${state.speed}`);
-  updateUI();
+speedBtn.addEventListener('click', () => { if (!state) return; state.speed = state.speed === 1 ? 2 : 1; showToast(`Speed x${state.speed}`); updateUI(); });
+pauseBtn.addEventListener('click', () => { if (!state) return; state.paused = !state.paused; updateUI(); });
+backBtn.addEventListener('click', () => { if (state) recordProgress(); showMenu(); });
+settingsBtn.addEventListener('click', openSettings);
+closeSettingsBtn.addEventListener('click', closeSettings);
+settingsModal.addEventListener('click', e => { if (e.target.dataset.closeModal) closeSettings(); });
+toggleMotionBtn.addEventListener('click', () => { settings.reducedMotion = !settings.reducedMotion; saveSettings(); renderSettings(); });
+toggleDamageBtn.addEventListener('click', () => { settings.showDamage = !settings.showDamage; saveSettings(); renderSettings(); });
+resetProgressBtn.addEventListener('click', () => {
+  localStorage.removeItem(saveKey);
+  showToast('Progress reset');
+  closeSettings();
+  showMenu();
 });
-pauseBtn.addEventListener('click', () => { state.paused = !state.paused; updateUI(); });
-backBtn.addEventListener('click', () => { if (state) saveGame(); showMenu(); });
 
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
@@ -810,4 +985,5 @@ if ('serviceWorker' in navigator) {
 }
 
 renderMapCards();
+renderSettings();
 requestAnimationFrame(loop);
